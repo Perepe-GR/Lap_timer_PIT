@@ -36,6 +36,17 @@ Thumbs.db
 # Log files and reports
 *.log
 
-# Local environment configuration (API keys)
+# Local environment & secrets configuration
+.env
+*.env
+app/.env
 .envconfig.js
+config.js
+pit-panel/config.js
+
+# Google Services & Credentials
+google-services.json
+app/google-services.json
+
+# Tooling and history logs
 .aider*
