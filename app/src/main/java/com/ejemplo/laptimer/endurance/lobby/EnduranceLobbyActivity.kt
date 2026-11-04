@@ -89,8 +89,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
     private fun observeViewModel() {
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
-                state.error?.let { err ->
-                    Toast.makeText(this@EnduranceLobbyActivity, err, Toast.LENGTH_SHORT).show()
+                state.error?.let {
                     viewModel.consumeError()
                 }
 

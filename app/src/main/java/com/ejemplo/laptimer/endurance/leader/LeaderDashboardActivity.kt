@@ -167,10 +167,7 @@ class LeaderDashboardActivity : AppCompatActivity() {
                 pilotsList.adapter = ArrayAdapter(this@LeaderDashboardActivity, android.R.layout.simple_list_item_1, items)
 
                 state.unexpectedPilotName?.let { unkName ->
-                    Snackbar.make(rootLayout, "$unkName seems to be on track without swap!", Snackbar.LENGTH_INDEFINITE)
-                        .setAction("SWAP NOW") {
-                            viewModel.dismissUnexpectedPilot()
-                        }.show()
+                    viewModel.dismissUnexpectedPilot()
                 }
             }
         }

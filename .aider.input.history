@@ -203,3 +203,11 @@
 
 # 2026-11-05 00:06:34.787060
 +Y
+
+# 2026-11-05 00:55:27.640866
++Busca la lógica del menú de configuración (Settings) donde se gestiona el cambio de "Color Theme and Palette". 
++Actualmente, el cambio de tema se aplica al pulsar el botón de guardar y cerrar el menú. 
++Modifica el código para que, en cuanto el usuario haga clic sobre una opción de color o paleta (en el listener del elemento o `onItemSelected`/`onClick`), el tema de la aplicación se actualice de forma inmediata y en tiempo real, sin necesidad de pulsar un botón de guardar ni cerrar la ventana.
+
+# 2026-11-05 00:55:48.608371
++Y

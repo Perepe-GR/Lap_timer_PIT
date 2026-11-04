@@ -76,7 +76,6 @@ class WaitingRoomFragment : Fragment() {
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Pit-Wall Link", url)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(requireContext(), "Pit-Wall management link copied to clipboard", Toast.LENGTH_SHORT).show()
             }
         }
         val lpCopy = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)

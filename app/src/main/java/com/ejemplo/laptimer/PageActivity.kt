@@ -114,7 +114,7 @@ abstract class PageActivity : AppCompatActivity() {
 
     internal fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    internal fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    internal fun toast(msg: String) { /* disabled per UI contract */ }
 
     internal fun roundBg(color: Int, radiusDp: Int, strokeColor: Int = 0, strokeDp: Int = 0): GradientDrawable {
         val g = GradientDrawable()

@@ -34,7 +34,6 @@ class AnalysisActivity : AppCompatActivity() {
         val r = if (id != null) store.get(id) else null
         val tr = if (id != null) TraceReader.read(store.traceFile(id)) else null
         if (r == null || tr == null || r.laps.isEmpty()) {
-            Toast.makeText(this, "No hay datos para analizar", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -127,7 +126,6 @@ class AnalysisActivity : AppCompatActivity() {
         if (a == null || b == null) {
             chartSpeed.clear()
             chartDelta.clear()
-            Toast.makeText(this, "No hay traza suficiente para esa lap", Toast.LENGTH_SHORT).show()
             return
         }
         traceView.setData(a.x, a.y, a.speed)

@@ -43,7 +43,7 @@ fun MainActivity.mmss(ms: Long): String {
 
 fun MainActivity.dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-fun MainActivity.toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+fun MainActivity.toast(msg: String) { /* disabled per UI contract */ }
 
 fun MainActivity.solid(fill: Int, fg: Int, text: String) {
     val g = GradientDrawable()

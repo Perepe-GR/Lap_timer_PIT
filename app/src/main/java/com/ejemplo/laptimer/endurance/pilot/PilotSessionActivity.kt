@@ -149,10 +149,7 @@ class PilotSessionActivity : AppCompatActivity() {
                 }
 
                 if (state.unexpectedMovement) {
-                    Snackbar.make(rootLayout, "Unexpected movement detected. Notify Leader?", Snackbar.LENGTH_INDEFINITE)
-                        .setAction("NOTIFY") {
-                            viewModel.dismissUnexpectedMovement()
-                        }.show()
+                    viewModel.dismissUnexpectedMovement()
                 }
             }
         }

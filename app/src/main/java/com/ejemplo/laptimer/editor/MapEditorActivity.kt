@@ -111,7 +111,7 @@ class MapEditorActivity : AppCompatActivity() {
     override fun onResume() { super.onResume(); map.onResume() }
     override fun onPause() { map.onPause(); super.onPause() }
 
-    internal fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    internal fun toast(msg: String) { /* disabled per UI contract */ }
 
     private fun initMapPosition() {
         val targetZoom = 18.0

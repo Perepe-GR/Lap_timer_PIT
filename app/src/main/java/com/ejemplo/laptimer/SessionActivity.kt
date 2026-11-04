@@ -29,7 +29,6 @@ class SessionActivity : AppCompatActivity() {
         val id = intent.getStringExtra("id")
         val r = if (id != null) store.get(id) else null
         if (r == null) {
-            Toast.makeText(this, "Sesión no encontrada", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -106,5 +105,5 @@ class SessionActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    private fun toast(msg: String) { /* disabled per UI contract */ }
 }
