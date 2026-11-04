@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": "$room.length >= 10",
+        ".write": "$room.length >= 10",
+        "msgs": {
+          "$id": {
+            ".validate": "newData.hasChildren(['text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 120"
+          }
+        }
+      }
+    }
+  }
+}

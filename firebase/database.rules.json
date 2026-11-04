@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "teams": {
+      "$teamCode": {
+        ".read": "auth != null && root.child('teams').child($teamCode).child('members').child(auth.uid).exists()",
+        "meta":     { ".write": "auth != null && !data.exists()" },
+        "members":  { "$uid": { ".write": "auth != null && auth.uid == $uid || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid" } },
+        "strategy": {
+          ".write": "auth != null && root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid"
+        },
+        "session":  { ".write": "auth != null && root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid" },
+        "pilots":   {
+          "$pilotId": {
+            ".write": "auth != null && (auth.uid == $pilotId || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid)"
+          }
+        }
+      }
+    }
+  }
+}
