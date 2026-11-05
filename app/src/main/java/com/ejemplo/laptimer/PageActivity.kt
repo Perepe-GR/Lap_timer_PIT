@@ -11,7 +11,6 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,6 +31,8 @@ abstract class PageActivity : AppCompatActivity() {
 
     internal lateinit var content: LinearLayout
     internal lateinit var footer: LinearLayout
+    private lateinit var scroll: ScrollView
+    private var savedScrollY = 0
 
     protected abstract val pageTitle: String
 
@@ -70,7 +71,7 @@ abstract class PageActivity : AppCompatActivity() {
         header.addView(title)
         root.addView(header)
 
-        val scroll = ScrollView(this)
+        scroll = ScrollView(this)
         scroll.isFillViewport = false
         content = LinearLayout(this)
         content.orientation = LinearLayout.VERTICAL
@@ -86,11 +87,20 @@ abstract class PageActivity : AppCompatActivity() {
         setContentView(root)
         build()
         refreshFooter()
+        if (savedScrollY > 0) {
+            scroll.post { scroll.scrollTo(0, savedScrollY) }
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        ThemeManager.onThemeChanged = { runOnUiThread { recreate() } }
+        ThemeManager.onThemeChanged = {
+            runOnUiThread {
+                savedScrollY = scroll.scrollY
+                rebuild()
+                scroll.post { scroll.scrollTo(0, savedScrollY) }
+            }
+        }
     }
 
     override fun onPause() {
