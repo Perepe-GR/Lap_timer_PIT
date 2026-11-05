@@ -17,6 +17,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.ejemplo.laptimer.CircuitStore
+import com.ejemplo.laptimer.util.ValidationUtils
 
 class CreateTeamFragment : Fragment() {
 
@@ -58,7 +59,7 @@ class CreateTeamFragment : Fragment() {
         root.addView(title)
 
         // Simplified fields: Team Name and numeric Team PIN / Code default "1234" (max 6 digits)
-        val etTeamName = inputField("Team Name", "Empuriabrava Racing", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS, 30)
+        val etTeamName = inputField("Team Name (6-15 chars)", "Empuria", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS, 15)
         val etCode = inputField("Team PIN / Code (4-6 digits)", "1234", InputType.TYPE_CLASS_NUMBER, 6)
         root.addView(etTeamName)
         val lpCode = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -118,7 +119,18 @@ class CreateTeamFragment : Fragment() {
             val name = etTeamName.text.toString().trim()
             val code = etCode.text.toString().trim()
             val circuitName = circuits.getOrNull(spCircuit.selectedItemPosition) ?: "Circuit 1"
-            if (name.isBlank() || code.isBlank()) return@setOnClickListener
+
+            var valid = true
+            if (!ValidationUtils.validateIdentifier(name)) {
+                etTeamName.error = "Team Name must be 6-15 alphanumeric characters with spaces."
+                valid = false
+            }
+            if (!ValidationUtils.validatePin(code)) {
+                etCode.error = "PIN must be strictly numeric (4-6 digits)."
+                valid = false
+            }
+            if (!valid) return@setOnClickListener
+
             (activity as? EnduranceLobbyActivity)?.viewModel?.createTeam(code, name, circuitName, "")
         }
         val lpBtn = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))

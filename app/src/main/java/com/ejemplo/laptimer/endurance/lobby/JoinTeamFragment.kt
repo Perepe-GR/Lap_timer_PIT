@@ -14,6 +14,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.ejemplo.laptimer.util.ValidationUtils
 
 class JoinTeamFragment : Fragment() {
 
@@ -54,9 +55,9 @@ class JoinTeamFragment : Fragment() {
         title.setPadding(0, 0, 0, dp(16))
         root.addView(title)
 
-        val etCode = inputField("Team Code / PIN (e.g. 1234)", "", InputType.TYPE_CLASS_NUMBER, 6)
-        val etPin = inputField("Confirm PIN (4-6 digits)", "", InputType.TYPE_CLASS_NUMBER, 6)
-        val etPilotName = inputField("Driver / Pilot Name", "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS, 30)
+        val etCode = inputField("Team Code (6-15 chars)", "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS, 15)
+        val etPin = inputField("PIN (4-6 digits)", "", InputType.TYPE_CLASS_NUMBER, 6)
+        val etPilotName = inputField("Driver Name (6-15 chars)", "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS, 15)
 
         root.addView(etCode)
         val lpPin = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -77,7 +78,22 @@ class JoinTeamFragment : Fragment() {
             val code = etCode.text.toString().trim()
             val pin = etPin.text.toString().trim()
             val name = etPilotName.text.toString().trim()
-            if (code.isBlank() || pin.isBlank() || name.isBlank()) return@setOnClickListener
+
+            var valid = true
+            if (!ValidationUtils.validateIdentifier(code)) {
+                etCode.error = "Team Code must be 6-15 alphanumeric characters."
+                valid = false
+            }
+            if (!ValidationUtils.validatePin(pin)) {
+                etPin.error = "PIN must be strictly numeric (4-6 digits)."
+                valid = false
+            }
+            if (!ValidationUtils.validateIdentifier(name)) {
+                etPilotName.error = "Driver Name must be 6-15 alphanumeric characters with spaces."
+                valid = false
+            }
+            if (!valid) return@setOnClickListener
+
             val pilotId = "pilot-" + System.currentTimeMillis()
             (activity as? EnduranceLobbyActivity)?.viewModel?.joinTeam(code, pin, pilotId, name)
         }
