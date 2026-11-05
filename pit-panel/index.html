@@ -138,6 +138,12 @@
     <button id="loadRaces" style="margin-top:8px">Ver / actualizar</button>
     <div class="small" id="racesList" style="margin-top:8px"></div>
   </section>
+
+  <section class="card">
+    <div class="label">Repositorio de Circuitos Compartidos</div>
+    <div class="small">Circuitos creados y sincronizados desde la app Android en tiempo real.</div>
+    <div id="circuitsList" style="margin-top:10px">Cargando circuitos...</div>
+  </section>
 </main>
 
 <div id="swapDlg">
@@ -399,7 +405,7 @@ function ensureAuth() {
 }
 async function authFetch(path, opts = {}, retry = true) {
   await ensureAuth();
-  const url = base() + path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(idToken);
+  const url = db + path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(idToken);
   const r = await fetch(url, opts);
   if ((r.status === 401 || r.status === 403) && retry) { await refreshAuth(); return authFetch(path, opts, false); }
   return r;
@@ -485,6 +491,43 @@ async function pollPending() {
     }).join('');
   } catch (e) { /* ignore */ }
 }
+
+async function pollCircuits() {
+  if (!db) return;
+  try {
+    await ensureAuth();
+    const url = db + '/circuits.json?auth=' + encodeURIComponent(idToken || '');
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = (await r.json()) || {};
+    const keys = Object.keys(data);
+    const list = $('circuitsList');
+    if (!list) return;
+    if (keys.length === 0) {
+      list.innerHTML = '<div class="small">No hay circuitos compartidos todavía.</div>';
+      return;
+    }
+    list.innerHTML = keys.map(k => {
+      const c = data[k];
+      return '<div style="background:#0B0D10;padding:10px 14px;border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<div><b>' + esc(c.name || k) + '</b> <span class="small">(Sectores: ' + (c.sectorCount || '-') + ')</span></div>' +
+        '<button onclick="downloadCircuit(\'' + esc(c.name || k) + '\', ' + encodeURIComponent(JSON.stringify(c.geojson || '')) + ')">Ver GeoJSON</button>' +
+        '</div>';
+    }).join('');
+  } catch (e) {
+    const list = $('circuitsList');
+    if (list) list.innerHTML = '<div class="small">Error al cargar circuitos.</div>';
+  }
+}
+
+window.downloadCircuit = function(name, jsonStr) {
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.json';
+  a.click();
+};
 
 window.acceptPendingPilot = async function(key, pilotId, pilotName, uid) {
   try {
@@ -700,7 +743,7 @@ async function cleanLegacy() {
     $('cleanMsg').textContent = 'Listo: ' + n + ' elementos borrados.';
     poll();
   } catch (e) {
-    $('cleanMsg').textContent = 'No se pudo limpiar: ' + e.message;
+    $('cleanMsg').textContent = 'No se pudo limpiar: ' + e.message.message;
   }
 }
 $('cleanBtn').addEventListener('click', cleanLegacy);
@@ -711,7 +754,7 @@ $('roomShow').textContent = room || '-';
 init();
 function pollDelay() { const n = Math.max(Object.keys(cars).length, nCars); return n <= 3 ? 3000 : n <= 10 ? 5000 : 8000; }
 function lapsDelay() { const n = Math.max(Object.keys(cars).length, nCars); return n <= 3 ? 15000 : n <= 10 ? 20000 : 30000; }
-async function loop() { await poll(); await pollPending(); setTimeout(loop, pollDelay()); }
+async function loop() { await poll(); await pollPending(); await pollCircuits(); setTimeout(loop, pollDelay()); }
 async function lapsLoop() { await pollLaps(); setTimeout(lapsLoop, lapsDelay()); }
 loop();
 setTimeout(lapsLoop, 2500);

@@ -138,8 +138,8 @@ data class Circuit(
     }
 }
 
-/** Guarda los circuitos como archivos JSON en el almacenamiento privado de la app. */
-class CircuitStore(context: Context) {
+/** Guarda los circuitos como archivos JSON en el almacenamiento privado de la app y sincroniza con Firebase /circuits. */
+class CircuitStore(private val context: Context) {
     private val dir = File(context.filesDir, "circuits").apply { mkdirs() }
     private val prefs = context.getSharedPreferences("laptimer", Context.MODE_PRIVATE)
 
@@ -148,6 +148,40 @@ class CircuitStore(context: Context) {
 
     fun save(c: Circuit) {
         fileFor(c.name).writeText(c.toJson())
+        syncCircuitToFirebase(context, c)
+    }
+
+    private fun syncCircuitToFirebase(context: Context, c: Circuit) {
+        val settings = NetSettings(context)
+        val dbUrl = settings.dbUrl.ifBlank { "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app" }
+        val circuitKey = c.name.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val payload = JSONObject().apply {
+            put("name", c.name)
+            put("signature", c.signature())
+            put("sectorCount", c.sectorCount)
+            put("geojson", c.toJson())
+            put("updatedAt", System.currentTimeMillis())
+        }.toString()
+
+        Thread {
+            try {
+                val token = kotlinx.coroutines.runBlocking {
+                    try { com.ejemplo.laptimer.firebase.FirebaseAuthManager.getIdToken() } catch (_: Exception) { null }
+                }
+                val cleanDb = dbUrl.trimEnd('/')
+                val authQuery = if (!token.isNullOrBlank()) "?auth=$token" else ""
+                val url = java.net.URL("$cleanDb/circuits/$circuitKey.json$authQuery")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "PUT"
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                conn.responseCode
+                conn.disconnect()
+            } catch (_: Exception) {
+                // ignore offline network failures gracefully
+            }
+        }.start()
     }
 
     fun delete(name: String) {
