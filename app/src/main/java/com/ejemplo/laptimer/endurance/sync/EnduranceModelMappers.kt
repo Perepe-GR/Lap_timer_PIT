@@ -30,6 +30,20 @@ fun MemberInfo.toMap(): Map<String, Any?> = mapOf(
     "t" to t
 )
 
+fun PendingPilot.toMap(): Map<String, Any?> = mapOf(
+    "id" to id,
+    "name" to name,
+    "uid" to uid,
+    "requestedAt" to requestedAt
+)
+
+fun pendingPilotFromMap(map: Map<String, Any?>): PendingPilot = PendingPilot(
+    id = map["id"]?.toString() ?: "",
+    name = map["name"]?.toString() ?: "",
+    uid = map["uid"]?.toString() ?: "",
+    requestedAt = (map["requestedAt"] as? Number)?.toLong() ?: (map["requestedAt"] as? String)?.toLongOrNull() ?: 0L
+)
+
 fun StrategyBase.toMap(): Map<String, Any?> = mapOf(
     "stintMinutes" to stintMinutes,
     "pitWindowLaps" to pitWindowLaps,
@@ -86,8 +100,8 @@ fun PilotInfo.toMap(): Map<String, Any?> = mapOf(
 )
 
 fun pilotInfoFromMap(map: Map<String, Any?>): PilotInfo = PilotInfo(
-    id = map["id"] as? String ?: "",
-    name = map["name"] as? String ?: "",
+    id = map["id"]?.toString() ?: "",
+    name = map["name"]?.toString() ?: "",
     status = map["status"] as? String ?: "READY",
     lastSeenTs = (map["lastSeenTs"] as? Number)?.toLong() ?: 0L
 )

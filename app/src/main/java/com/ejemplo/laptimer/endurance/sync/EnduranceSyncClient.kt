@@ -119,12 +119,56 @@ class EnduranceSyncClient(
         }
     }
 
+    suspend fun requestJoin(code: String, pilotId: String, pilotName: String, uid: String): Result<Unit> = runCatching {
+        val pending = PendingPilot(id = pilotId, name = pilotName, uid = uid, requestedAt = System.currentTimeMillis())
+        request("PUT", "rooms/$code/pending/$pilotId", JSONObject(pending.toMap()).toString())
+    }
+
     suspend fun joinTeam(code: String, pilotId: String, pilotName: String): Result<Unit> = runCatching {
         val currentUid = FirebaseAuthManager.ensureAuthenticated()
-        Log.i(TAG, "joinTeam: code=$code, pilotId=$pilotId, pilotName=$pilotName, currentUid=$currentUid")
+        Log.i(TAG, "joinTeam (Request Access): code=$code, pilotId=$pilotId, pilotName=$pilotName, currentUid=$currentUid")
+        requestJoin(code, pilotId, pilotName, currentUid).getOrThrow()
+    }
+
+    fun observePendingPilots(code: String): Flow<Map<String, PendingPilot>> = flow {
+        while (true) {
+            runCatching {
+                val res = request("GET", "rooms/$code/pending")
+                if (res.isNotBlank() && res != "null") {
+                    val trimmed = res.trim()
+                    if (trimmed.startsWith("{")) {
+                        val result = mutableMapOf<String, PendingPilot>()
+                        val root = JSONObject(trimmed)
+                        val keys = root.keys()
+                        while (keys.hasNext()) {
+                            val pId = keys.next()
+                            if (!root.isNull(pId)) {
+                                val pObj = root.getJSONObject(pId)
+                                val map = mutableMapOf<String, Any?>()
+                                val ik = pObj.keys()
+                                while (ik.hasNext()) {
+                                    val k = ik.next()
+                                    if (!pObj.isNull(k)) map[k] = pObj.get(k)
+                                }
+                                result[pId] = pendingPilotFromMap(map)
+                            }
+                        }
+                        emit(result)
+                    }
+                } else {
+                    emit(emptyMap())
+                }
+            }
+            delay(3000L)
+        }
+    }
+
+    suspend fun acceptPilot(code: String, pilotId: String, pilotName: String, uid: String): Result<Unit> = runCatching {
         val info = PilotInfo(pilotId, pilotName, "READY", System.currentTimeMillis())
         request("PUT", "rooms/$code/pilots/$pilotId/info", JSONObject(info.toMap()).toString())
-        registerMember(code, currentUid, "pilot", pilotName)
+        val member = MemberInfo(role = "pilot", name = pilotName, t = System.currentTimeMillis())
+        request("PUT", "rooms/$code/members/$uid", JSONObject(member.toMap()).toString())
+        request("PUT", "rooms/$code/pending/$pilotId", "null")
     }
 
     suspend fun setSessionState(code: String, state: String): Result<Unit> = runCatching {

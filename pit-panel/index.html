@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PIT panel · V2.1.9</title>
+<title>PIT panel · Lap Timer v2.2.0</title>
 <style>
   :root { --bg:#0B0D10; --card:#12161B; --muted:#9AA3AE; --text:#F2F4F7; --green:#C6F432; --red:#FF5A5F; --amber:#F5A524; }
   * { box-sizing: border-box; }
@@ -85,35 +85,41 @@
     <p class="small">URL de Firebase Realtime Database y código de sala (el mismo que en las apps de los drivers).</p>
     <input id="dbIn" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com" style="margin-bottom:8px">
     <input id="roomIn" placeholder="CÓDIGO DE SALA" style="margin-bottom:8px">
-    <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN de la sala (solo para entrar o cambiar de rol)" style="margin-bottom:8px" autocomplete="off">
+    <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN de la sala (4-6 dígitos)" style="margin-bottom:8px" autocomplete="off">
     <input id="nameIn" placeholder="Tu nombre (opcional)" style="margin-bottom:8px" autocomplete="off">
     <div class="err" id="cfgErr"></div>
-    <label class="small" style="display:block;margin-bottom:4px">Rol en este panel (solo cambia lo que se muestra; no es seguridad)</label>
-    <select id="roleIn" style="margin-bottom:8px"><option value="crew_chief">crew_chief (mur de boxes completo)</option><option value="pilot">pilot (seguimiento de pilot/stint)</option></select>
+    <label class="small" style="display:block;margin-bottom:4px">Rol en este panel</label>
+    <select id="roleIn" style="margin-bottom:8px"><option value="crew_chief">crew_chief (muro de boxes y admisión)</option><option value="pilot">pilot (seguimiento de pilot/stint)</option></select>
     <label class="small" style="display:block;margin-bottom:4px">Número de cars de la race (1 a 30)</label>
     <input id="carsIn" type="number" min="1" max="30" value="1" style="margin-bottom:8px">
     <button class="primary" id="saveCfg">Entrar a la sala</button>
     <div class="label crewonly" style="margin-top:16px">Limpieza</div>
-    <p class="small crewonly">Borra datos antiguos de la sala (campos sueltos de versiones anteriores y buzones con nombres que no son cars). Los cars actuales no se tocan.</p>
+    <p class="small crewonly">Borra datos antiguos de la sala (campos sueltos y buzones).</p>
     <button id="cleanBtn" class="crewonly">Limpiar sala</button>
     <div class="small" id="cleanMsg" style="margin-top:6px"></div>
+  </section>
+
+  <section class="card crewonly" id="pendingSection" style="display:none">
+    <div class="label">Solicitudes de Pilotos Pendientes (Admisión)</div>
+    <div class="small">Pilotos solicitando unirse a la sala. Haz clic en "Aceptar" para darles acceso a la sesión.</div>
+    <div id="pendingList" style="margin-top:10px"></div>
   </section>
 
   <section id="cars"><div class="card small">Esperando datos de los cars…</div></section>
 
   <section class="card crewonly">
-    <div class="label">Mensaje al driver (solo texto en pantalla, sin sonido)</div>
-    <div class="small">Un toque en un mensaje rápido lo envía. Se ve durante el sector en que llega y el siguiente.</div>
+    <div class="label">Mensaje al driver (instrucción táctica en tiempo real)</div>
+    <div class="small">Un toque en un mensaje rápido lo envía. Se ve en el banner persistente del piloto.</div>
     <label class="small" style="display:block;margin-top:10px">Destino</label>
     <select id="target"><option value="*">Todos los cars</option></select>
     <div class="quick" id="quick"></div>
 
-    <div class="label" style="margin-top:14px">Mensaje personalizado</div>
-    <input id="msg" maxlength="120" placeholder="Escribe un mensaje corto" autocomplete="off">
+    <div class="label" style="margin-top:14px">Instrucción táctica personalizada</div>
+    <input id="msg" maxlength="120" placeholder="Escribe una instrucción táctica" autocomplete="off">
     <div class="swatches" id="swatches"></div>
     <div id="preview"></div>
-    <button class="primary" id="send" style="width:100%">Enviar mensaje</button>
-    <div class="small" id="sent" style="margin-top:6px">Llega al móvil del driver en el siguiente intercambio (hasta 10 s o el intervalo configurado).</div>
+    <button class="primary" id="send" style="width:100%">Enviar instrucción</button>
+    <div class="small" id="sent" style="margin-top:6px">Llega al móvil del driver en el banner táctico persistente.</div>
     <div class="err" id="err"></div>
   </section>
 
@@ -180,7 +186,7 @@ function mmss(ms) { const t = Math.floor(ms / 1000); return Math.floor(t / 60) +
 function sec(ms) { return (ms / 1000).toFixed(2); }
 const base = () => db + '/rooms/' + room;
 
-// ---- Colores de mensaje (los mismos que dibuja la app) ----
+// ---- Colores de mensaje ----
 const Y = '#FACC15', R = '#EF4444';
 const STRIPES = 'linear-gradient(90deg,' + [Y, R, Y, R, Y, R, Y, R, Y]
   .map((c, i) => c + ' ' + (i * 100 / 9).toFixed(2) + '% ' + ((i + 1) * 100 / 9).toFixed(2) + '%').join(',') + ')';
@@ -190,7 +196,7 @@ const COLORS = {
   rojo:     { name: 'Rojo',     bg: R,         fg: '#FFFFFF' },
   azul:     { name: 'Azul',     bg: '#2563EB', fg: '#FFFFFF' },
   blanco:   { name: 'Blanco',   bg: '#F2F4F7', fg: '#141413' },
-  rayas:    { name: 'Rayas rojas y amarillas (4 rayas)', bg: STRIPES, fg: '#FFFFFF', pill: true }
+  rayas:    { name: 'Rayas rojas y amarillas', bg: STRIPES, fg: '#FFFFFF', pill: true }
 };
 const PRESETS = [
   ['PIT', 'amarillo'], ['ALL OK', 'verde'], ['CAUTION', 'amarillo'], ['SAFETY CAR', 'amarillo'],
@@ -240,8 +246,6 @@ let selCar = null;
 let legacyCount = 0;
 let lastRaw = {};
 let nCars = Math.max(1, Math.min(30, parseInt(q.get('cars') || localStorage.getItem('nCars') || '1', 10) || 1));
-const LEGACY_KEYS = ['bat', 'best', 'circuito', 'cur', 'delta', 'demo', 'kmh', 'lap', 'last', 'lat', 'lon', 'opt', 'run', 'sector', 'sectores', 't', 'v', 'car', 'driver', 'msgs'];
-// Un car es un objeto con datos; los campos sueltos de versiones antiguas no son cars
 function validCars(raw) {
   const out = {};
   Object.keys(raw || {}).forEach(k => {
@@ -251,8 +255,6 @@ function validCars(raw) {
   return out;
 }
 const isEndu = c => c.mode == null || c.mode === 'resistencia';
-// Rol de la vista (solo interfaz). El contrato exige un único crew_chief por sala, pero eso
-// requiere Firebase Auth y reglas de seguridad; aquí no se puede comprobar.
 let role = localStorage.getItem('role') === 'crew_chief' ? 'crew_chief' : 'pilot';
 function applyRole() { document.body.dataset.role = role; $('roleIn').value = role; }
 const palette = ['#F5A524', '#C6F432', '#60A5FA', '#F472B6', '#A78BFA', '#34D399', '#FB7185', '#FBBF24'];
@@ -274,9 +276,6 @@ function carCard(k, c) {
   if (c.maxMs > 0) stint += ' / ' + mmss(c.maxMs);
   if (c.minMs > 0) stint += ' (mín ' + mmss(c.minMs) + ')';
   stint += ' · Laps ' + (c.stintLaps || 0) + (c.plan > 0 ? '/' + c.plan : '');
-  if (c.minLaps > 0 || c.maxLaps > 0) stint += ' (' + (c.minLaps > 0 ? 'mín ' + c.minLaps : '') + (c.minLaps > 0 && c.maxLaps > 0 ? ' · ' : '') + (c.maxLaps > 0 ? 'máx ' + c.maxLaps : '') + ')';
-  if (c.planMin > 0) stint += ' · objetivo ' + c.planMin + ' min';
-  // Colores: rojo si entrar a PIT incumpliría los límites, verde dentro de ellos, lila si cumple el objetivo exacto
   let cls = '';
   if (c.health) cls = c.health === 'red' ? 'red' : c.health === 'green' ? 'green' : c.health === 'purple' ? 'purple' : '';
   else if (c.maxMs > 0 && el >= c.maxMs) cls = 'red';
@@ -348,7 +347,6 @@ function renderCars() {
     for (let i = 0; i < missing; i++) html += '<div class="card small pending">Car pendiente de conectar (' + (keys.length + i + 1) + ' de ' + nCars + ')</div>';
   }
   $('cars').innerHTML = html;
-  // destinos de los mensajes
   const t = $('target'), cur = t.value;
   t.innerHTML = '<option value="*">Todos los cars</option>' +
     keys.map(k => '<option value="' + esc(k) + '">' + esc(cars[k].car || k) + '</option>').join('');
@@ -356,7 +354,6 @@ function renderCars() {
   $('lapsTitle').textContent = 'LAP log · ' + (cars[selCar].car || selCar);
 }
 
-// El contrato manda: live trae timeMs, bestMs y zone. Se mapean a los nombres internos del panel.
 function normalize(obj) {
   const out = {};
   Object.keys(obj).forEach(k => {
@@ -371,7 +368,7 @@ function normalize(obj) {
   return out;
 }
 
-// ---- Autenticación anónima (modo B del contrato) ----
+// ---- Autenticación anónima ----
 const API_KEY = CONFIG.FIREBASE_API_KEY;
 let idToken = null, refreshTok = localStorage.getItem('rt') || null, uid = localStorage.getItem('uid') || null, expAt = 0;
 function saveAuth() { localStorage.setItem('rt', refreshTok || ''); localStorage.setItem('uid', uid || ''); }
@@ -396,7 +393,6 @@ async function refreshAuth() {
   expAt = Date.now() + Number(d.expires_in) * 1000; saveAuth();
 }
 let authBusy = null;
-// Una sola autenticación a la vez: evita crear dos usuarios anónimos si sondeo e init llegan juntos
 function ensureAuth() {
   if (!authBusy) authBusy = (async () => {
     if (!idToken) { if (refreshTok) await refreshAuth(); else await signInAnon(); }
@@ -404,7 +400,6 @@ function ensureAuth() {
   })().finally(() => { authBusy = null; });
   return authBusy;
 }
-// Todas las lecturas y escrituras de la sala pasan por aquí: añade ?auth=<token> y reintenta una vez si caduca
 async function authFetch(path, opts = {}, retry = true) {
   await ensureAuth();
   const url = base() + path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(idToken);
@@ -426,7 +421,6 @@ function setRole(r) {
   localStorage.setItem('role', role);
   applyRole();
 }
-// Valida el PIN contra meta (SHA-256(salt + PIN)) y registra al miembro con el rol elegido
 async function joinRoom(pin, wanted, name) {
   const mr = await authFetch('/meta.json', { cache: 'no-store' });
   if (!mr.ok) throw new Error('No se pudo leer la sala (HTTP ' + mr.status + ').');
@@ -454,7 +448,7 @@ async function init() {
   } catch (e) { $('cfg').style.display = 'block'; $('cfgErr').textContent = e.message; }
 }
 
-// ---- Consultas: solo los datos en vivo cada 3 s; las laps, menos a menudo ----
+// ---- Consultas en vivo y pilotos pendientes de admisión ----
 async function poll() {
   if (!db || !room) return;
   try {
@@ -465,18 +459,57 @@ async function poll() {
     legacyCount = Object.keys(lastRaw).length - Object.keys(cars).length;
     const nc = Object.keys(cars).length;
     let st = nc ? 'Conectado · ' + nc + ' de ' + nCars + ' car(s)' : 'Conectado, esperando datos de los cars';
-    if (nc > nCars) st += ' · hay más cars que los configurados';
-    if (legacyCount > 0) st += ' · datos antiguos en la sala (ajustes > limpiar)';
     setStatus(true, st);
     renderCars();
   } catch (e) {
     setStatus(false, 'Sin conexión con Firebase (' + e.message + ')');
   }
 }
+
+async function pollPending() {
+  if (!db || !room || role !== 'crew_chief') return;
+  try {
+    const r = await authFetch('/pending.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = (await r.json()) || {};
+    const keys = Object.keys(data);
+    const sec = $('pendingSection');
+    const list = $('pendingList');
+    if (keys.length === 0) {
+      sec.style.display = 'none';
+      return;
+    }
+    sec.style.display = 'block';
+    list.innerHTML = keys.map(k => {
+      const p = data[k];
+      return '<div style="display:flex;justify-content:space-between;align-items:center;background:#0B0D10;padding:8px 12px;border-radius:10px;margin-bottom:6px;">' +
+        '<span><b>' + esc(p.name || k) + '</b> (Solicitud ID: ' + esc(p.id) + ')</span>' +
+        '<button class="primary" onclick="acceptPendingPilot(\'' + esc(k) + '\', \'' + esc(p.id) + '\', \'' + esc(p.name) + '\', \'' + esc(p.uid) + '\')">Aceptar</button>' +
+        '</div>';
+    }).join('');
+  } catch (e) { /* ignore */ }
+}
+
+window.acceptPendingPilot = async function(key, pilotId, pilotName, uid) {
+  try {
+    await authFetch('/pilots/' + encodeURIComponent(pilotId) + '/info.json', {
+      method: 'PUT', body: JSON.stringify({ id: pilotId, name: pilotName, status: 'READY', lastSeenTs: Date.now() })
+    });
+    await authFetch('/members/' + encodeURIComponent(uid) + '.json', {
+      method: 'PUT', body: JSON.stringify({ role: 'pilot', name: pilotName, t: Date.now() })
+    });
+    await authFetch('/pending/' + encodeURIComponent(key) + '.json', {
+      method: 'PUT', body: 'null'
+    });
+    pollPending();
+  } catch (e) {
+    alert('No se pudo aceptar al piloto: ' + e.message);
+  }
+};
+
 async function pollLaps() {
   if (!db || !room || !selCar) return;
   try {
-    // Toda la race en curso (desde su primera lap); si la app aún no ha abierto race, las últimas 10
     const rs = cars[selCar] && cars[selCar].raceStart;
     const qs = rs ? '?orderBy=%22%24key%22&startAt=%22L' + rs + '%22' : '?orderBy=%22%24key%22&limitToLast=10';
     const r = await authFetch('/laps/' + encodeURIComponent(selCar) + '.json' + qs, { cache: 'no-store' });
@@ -494,7 +527,7 @@ async function pollLaps() {
       '</td><td class="' + (!l.k && l.ms === bestMs ? 'best' : '') + '">' + fmt(l.ms) + '</td><td>' + esc(l.d || '') +
       '</td><td>' + esc(l.st != null ? l.st : '') + '</td></tr>').join('');
     if (follow) box.scrollTop = box.scrollHeight;
-  } catch (e) { /* se reintenta en la siguiente */ }
+  } catch (e) { /* se reintenta */ }
 }
 function selectCar(k) { selCar = k; renderCars(); pollLaps(); }
 
@@ -510,7 +543,7 @@ async function send(text, bg) {
     await Promise.all(targets.map(k => authFetch('/inbox/' + encodeURIComponent(k) + '.json', {
       method: 'POST', body: JSON.stringify({ text: text, bg: bg })
     }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); })));
-    $('sent').textContent = 'Enviado a ' + (t === '*' ? 'todos' : (cars[t] && cars[t].car) || t) + ': «' + text + '» (' + new Date().toLocaleTimeString() + ')';
+    $('sent').textContent = 'Instrucción enviada a ' + (t === '*' ? 'todos' : (cars[t] && cars[t].car) || t) + ': «' + text + '» (' + new Date().toLocaleTimeString() + ')';
   } catch (e) {
     $('err').textContent = 'No se pudo enviar: ' + e.message;
   }
@@ -546,7 +579,6 @@ async function sendSwap() {
     $('swErr').textContent = 'No se pudo enviar: ' + e.message;
   }
 }
-// Confirmar el cambio desde el panel: solo con el car en PIT. La app lo aplica en su próximo intercambio (hasta 10 s)
 async function confirmSwap(k) {
   const c = cars[k];
   if (!c || !c.inPit) return;
@@ -565,7 +597,7 @@ async function cancelSwap(k) {
   try {
     await authFetch('/cmd/' + encodeURIComponent(k) + '.json', { method: 'PUT', body: 'null' });
     poll();
-  } catch (e) { /* se reintenta al pulsar de nuevo */ }
+  } catch (e) { /* ignore */ }
 }
 $('swSend').addEventListener('click', sendSwap);
 $('swClose').addEventListener('click', () => { $('swapDlg').style.display = 'none'; });
@@ -603,7 +635,7 @@ $('saveCfg').addEventListener('click', async () => {
   } catch (e) { $('cfgErr').textContent = e.message; }
 });
 
-// ---- Race summaries (guardados por la app al terminar la race o cerrar la sesión) ----
+// ---- Race summaries ----
 function raceItem(car, id, r) {
   const laps = Object.keys(r.laps || {}).sort((a, b) => Number(a) - Number(b)).map(k => r.laps[k]);
   const counted = laps.filter(a => a.n > 0).length;
@@ -645,10 +677,10 @@ $('racesList').addEventListener('click', async e => {
   } catch (err) { alert('No se pudo borrar: ' + err.message); }
 });
 
-// ---- Limpieza de restos de versiones antiguas ----
+// ---- Limpieza ----
 async function cleanLegacy() {
   if (!db || !room) { $('cleanMsg').textContent = 'Falta configurar la conexión.'; return; }
-  if (!confirm('Se borrarán de la sala todos los cars que NO estén transmitiendo ahora (datos en vivo, laps, mensajes y órdenes) y los restos antiguos. Si no hay ningún car transmitiendo, se borra todo. Los Race summaries guardados no se tocan. ¿Continuar?')) return;
+  if (!confirm('¿Continuar con la limpieza?')) return;
   $('cleanMsg').textContent = 'Limpiando…';
   let n = 0;
   try {
@@ -663,7 +695,6 @@ async function cleanLegacy() {
       return (await r.json()) || {};
     };
     const live = await get('/live');
-    // Transmitiendo = car con datos de hace menos de 45 s (la app envía cada 10 s o más)
     const now = Date.now();
     const active = new Set(Object.keys(live).filter(k => live[k] && typeof live[k] === 'object' && now - (live[k].t || 0) < 45000));
     for (const node of ['live', 'laps', 'inbox', 'cmd']) {
@@ -671,7 +702,7 @@ async function cleanLegacy() {
       for (const k of keys) if (!active.has(k)) await del('/' + node + '/' + encodeURIComponent(k));
     }
     cars = {}; selCar = null; renderCars();
-    $('cleanMsg').textContent = 'Listo: ' + n + ' elementos borrados' + (active.size ? ' (se mantienen ' + active.size + ' transmitiendo).' : '.');
+    $('cleanMsg').textContent = 'Listo: ' + n + ' elementos borrados.';
     poll();
   } catch (e) {
     $('cleanMsg').textContent = 'No se pudo limpiar: ' + e.message;
@@ -683,10 +714,9 @@ $('dbIn').value = db; $('roomIn').value = room; $('carsIn').value = nCars;
 applyRole();
 $('roomShow').textContent = room || '-';
 init();
-// Con más cars se consulta menos a menudo para cuidar la cuota gratuita de Firebase
 function pollDelay() { const n = Math.max(Object.keys(cars).length, nCars); return n <= 3 ? 3000 : n <= 10 ? 5000 : 8000; }
 function lapsDelay() { const n = Math.max(Object.keys(cars).length, nCars); return n <= 3 ? 15000 : n <= 10 ? 20000 : 30000; }
-async function loop() { await poll(); setTimeout(loop, pollDelay()); }
+async function loop() { await poll(); await pollPending(); setTimeout(loop, pollDelay()); }
 async function lapsLoop() { await pollLaps(); setTimeout(lapsLoop, lapsDelay()); }
 loop();
 setTimeout(lapsLoop, 2500);

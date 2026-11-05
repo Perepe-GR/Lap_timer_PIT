@@ -211,3 +211,24 @@
 
 # 2026-11-05 00:55:48.608371
 +Y
+
+# 2026-11-05 01:05:52.422199
++Modifica la lógica del menú de configuración (Settings) donde se gestiona el cambio de "Color Theme and Palette". 
++1. Elimina la dependencia de guardar mediante un botón de confirmación para aplicar los cambios estéticos.
++2. Actualiza el listener de selección de cada color o paleta (en el componente de UI correspondiente, ya sea RecyclerView, RadioGroup o Composable) para que ejecute la función de cambio de tema (`setTheme`, `applyTheme` o equivalente) de forma instantánea en el preciso momento en que el usuario hace clic sobre la opción.
++3. Asegúrate de que el estado visual se actualice al vuelo y, opcionalmente, elimina o deja obsoleto el botón de guardar exclusivo de esta sección si ya no cumple ninguna función.
+
+# 2026-11-05 01:07:01.639867
++/add ThemeSelectorActivity.kt SettingsActivity.kt AppearanceSettingsFragment.kt ThemeDialog.kt
+
+# 2026-11-05 01:07:10.017215
++N
+
+# 2026-11-05 01:07:30.276895
++/add ThemeSelectorActivity.kt
+
+# 2026-11-05 01:07:36.000556
++N
+
+# 2026-11-05 01:07:51.191899
++cuales aschivos?

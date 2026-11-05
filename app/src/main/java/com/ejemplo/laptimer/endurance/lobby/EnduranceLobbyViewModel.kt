@@ -1,10 +1,13 @@
 package com.ejemplo.laptimer.endurance.lobby
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ejemplo.laptimer.NetSettings
 import com.ejemplo.laptimer.endurance.sync.*
+import com.ejemplo.laptimer.firebase.FirebaseAuthManager
+import com.ejemplo.laptimer.firebase.HashUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +22,7 @@ data class LobbyUiState(
     val teamName: String = "",
     val circuitId: String = "",
     val pilots: Map<String, PilotData> = emptyMap(),
+    val pendingPilots: Map<String, PendingPilot> = emptyMap(),
     val sessionState: String = "LOBBY",
     val error: String? = null,
     val navigateToSession: String? = null
@@ -55,16 +59,29 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
 
     fun createTeam(code: String, name: String, circuitId: String, leaderUid: String) {
         viewModelScope.launch {
+            Log.i("EnduranceLobbyViewModel", "createTeam invoked for code: $code")
             val cleanCode = code.trim().uppercase()
+            val currentUid = try {
+                FirebaseAuthManager.ensureAuthenticated()
+            } catch (e: Exception) {
+                Log.e("EnduranceLobbyViewModel", "Firebase Auth failed prior to createTeam: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(error = "Authentication failed: ${e.message}")
+                return@launch
+            }
+            Log.i("EnduranceLobbyViewModel", "Authenticated UID for creation: $currentUid")
+
             val metaRes = syncClient.fetchTeamMeta(cleanCode)
             val existingMeta = metaRes.getOrNull()
-            if (existingMeta != null && existingMeta.leaderUid.isNotBlank() && existingMeta.leaderUid != leaderUid) {
+            if (existingMeta != null && existingMeta.leaderUid.isNotBlank() && existingMeta.leaderUid != currentUid) {
+                Log.w("EnduranceLobbyViewModel", "Crew Chief collision: room $cleanCode already owned by ${existingMeta.leaderUid}")
                 _uiState.value = _uiState.value.copy(error = "Only one Crew Chief is allowed per team session.")
                 return@launch
             }
+
             val pin = cleanCode
-            val res = syncClient.createTeam(cleanCode, name, circuitId, leaderUid, pin)
+            val res = syncClient.createTeam(cleanCode, name, circuitId, currentUid, pin)
             if (res.isSuccess) {
+                Log.i("EnduranceLobbyViewModel", "createTeam Result SUCCESS for $cleanCode")
                 _uiState.value = _uiState.value.copy(
                     teamCode = cleanCode,
                     teamName = name,
@@ -75,7 +92,9 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 )
                 startObserving(cleanCode)
             } else {
-                _uiState.value = _uiState.value.copy(error = "Failed to create team: ${res.exceptionOrNull()?.message}")
+                val err = res.exceptionOrNull()
+                Log.e("EnduranceLobbyViewModel", "createTeam Result FAILURE: ${err?.message}", err)
+                _uiState.value = _uiState.value.copy(error = "Failed to create team: ${err?.message}")
             }
         }
     }
@@ -90,7 +109,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 return@launch
             }
             val isValidPin = if (meta.pinHash.isNotBlank()) {
-                com.ejemplo.laptimer.firebase.HashUtils.sha256(meta.salt, inputPin.trim()) == meta.pinHash
+                HashUtils.sha256(meta.salt, inputPin.trim()) == meta.pinHash
             } else {
                 meta.code == inputPin.trim()
             }
@@ -110,8 +129,14 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 )
                 startObserving(cleanCode)
             } else {
-                _uiState.value = _uiState.value.copy(error = "Failed to join team: ${joinRes.exceptionOrNull()?.message}")
+                _uiState.value = _uiState.value.copy(error = "Failed to request join: ${joinRes.exceptionOrNull()?.message}")
             }
+        }
+    }
+
+    fun acceptPilot(code: String, pilotId: String, pilotName: String, uid: String) {
+        viewModelScope.launch {
+            syncClient.acceptPilot(code, pilotId, pilotName, uid)
         }
     }
 
@@ -126,6 +151,11 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             syncClient.observePilots(code).collect { pilots ->
                 _uiState.value = _uiState.value.copy(pilots = pilots)
+            }
+        }
+        viewModelScope.launch {
+            syncClient.observePendingPilots(code).collect { pending ->
+                _uiState.value = _uiState.value.copy(pendingPilots = pending)
             }
         }
         viewModelScope.launch {

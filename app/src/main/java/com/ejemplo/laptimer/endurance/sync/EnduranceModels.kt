@@ -23,6 +23,14 @@ data class MemberInfo(
 )
 
 @Keep
+data class PendingPilot(
+    val id: String = "",
+    val name: String = "",
+    val uid: String = "",
+    val requestedAt: Long = 0L
+)
+
+@Keep
 data class StrategyBase(
     val stintMinutes: Int = 0,
     val pitWindowLaps: Int = 0,
