@@ -82,8 +82,8 @@
 <main>
   <section class="card" id="cfg">
     <div class="label">Acceso a Sala (Endurance Mode)</div>
-    <p class="small">Introduce el Team Name (Room Code) y el PIN numérico de acceso.</p>
-    <input id="roomIn" placeholder="TEAM NAME / ROOM CODE" style="margin-bottom:8px">
+    <p class="small">Introduce el código de sala (Team Name) y el PIN numérico de acceso.</p>
+    <input id="roomIn" placeholder="CÓDIGO DE SALA" style="margin-bottom:8px">
     <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN de la sala (4-6 dígitos)" style="margin-bottom:8px" autocomplete="off">
     <input id="nameIn" placeholder="Tu nombre (opcional)" style="margin-bottom:8px" autocomplete="off">
     <div class="err" id="cfgErr"></div>
@@ -140,7 +140,7 @@
   </section>
 
   <section class="card">
-    <div class="label">Repositorio de Circuitos Compartidos</div>
+    <div class="label">Repositorio de Circuitos Sincronizados</div>
     <div class="small">Circuitos creados y sincronizados desde la app Android en tiempo real.</div>
     <div id="circuitsList" style="margin-top:10px">Cargando circuitos...</div>
   </section>
@@ -405,7 +405,7 @@ function ensureAuth() {
 }
 async function authFetch(path, opts = {}, retry = true) {
   await ensureAuth();
-  const url = db + path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(idToken);
+  const url = db + '/rooms/' + room + path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(idToken);
   const r = await fetch(url, opts);
   if ((r.status === 401 || r.status === 403) && retry) { await refreshAuth(); return authFetch(path, opts, false); }
   return r;
@@ -471,7 +471,6 @@ async function poll() {
 async function pollPending() {
   if (!room || role !== 'crew_chief') return;
   try {
-    // Check both /pending and /requests routes for robustness
     const r = await authFetch('/pending.json', { cache: 'no-store' });
     const rReq = await authFetch('/requests.json', { cache: 'no-store' });
     let data = (await r.json()) || {};
@@ -518,13 +517,21 @@ async function pollCircuits() {
       list.innerHTML = '<div class="small">No hay circuitos compartidos todavía.</div>';
       return;
     }
-    list.innerHTML = keys.map(k => {
-      const c = data[k];
-      return '<div style="background:#0B0D10;padding:10px 14px;border-radius:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
-        '<div><b>' + esc(c.name || k) + '</b> <span class="small">(Sectores: ' + (c.sectorCount || '-') + ')</span></div>' +
-        '<button onclick="downloadCircuit(\'' + esc(c.name || k) + '\', ' + encodeURIComponent(JSON.stringify(c.geojson || '')) + ')">Ver GeoJSON</button>' +
-        '</div>';
-    }).join('');
+    list.innerHTML = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top:10px;">' +
+      keys.map(k => {
+        const c = data[k];
+        const dateStr = c.updatedAt ? new Date(c.updatedAt).toLocaleString() : '-';
+        return '<div style="background:#0B0D10;border-radius:12px;padding:14px;border:1px solid #2A313A;">' +
+          '<div style="font-size:16px;font-weight:800;color:var(--green)">' + esc(c.name || k) + '</div>' +
+          '<div class="small" style="margin-top:4px">Sectores: <b>' + (c.sectorCount || '-') + '</b></div>' +
+          '<div class="small">Actualizado: ' + esc(dateStr) + '</div>' +
+          '<div class="actions" style="margin-top:10px">' +
+          '<button onclick="downloadCircuit(\'' + esc(c.name || k) + '\', ' + encodeURIComponent(JSON.stringify(c.geojson || '')) + ')">GeoJSON</button>' +
+          '<button class="primary" onclick="selectCircuit(\'' + esc(c.name || k) + '\')">Seleccionar</button>' +
+          '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>';
   } catch (e) {
     const list = $('circuitsList');
     if (list) list.innerHTML = '<div class="small">Error al cargar circuitos.</div>';
@@ -573,6 +580,16 @@ window.rejectPendingPilot = async function(key) {
     pollPending();
   } catch (e) {
     alert('No se pudo rechazar al piloto: ' + e.message);
+  }
+};
+
+window.selectCircuit = async function(circuitName) {
+  try {
+    const r = await authFetch('/meta/circuitId.json', { method: 'PUT', body: JSON.stringify(circuitName) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    alert('Circuito activo para la sesión actualizado a: ' + circuitName);
+  } catch (e) {
+    alert('No se pudo establecer el circuito: ' + e.message);
   }
 };
 
@@ -652,12 +669,12 @@ async function confirmSwap(k) {
   const c = cars[k];
   if (!c || !c.inPit) return;
   try {
-    const url = base() + '/cmd/' + encodeURIComponent(k) + '.json';
+    const url = db + '/rooms/' + room + '/cmd/' + encodeURIComponent(k) + '.json?auth=' + encodeURIComponent(idToken);
     let cur = null;
-    if (!c.swapProg) { const r = await authFetch(url, { cache: 'no-store' }); cur = await r.json(); }
+    if (!c.swapProg) { const r = await fetch(url, { cache: 'no-store' }); cur = await r.json(); }
     const body = cur && cur.id ? Object.assign({}, cur, { conf: true })
       : { id: Date.now().toString(36), next: c.swap, laps: 0, min: 0, max: 0, pit: 0, conf: true };
-    const w = await authFetch(url, { method: 'PUT', body: JSON.stringify(body) });
+    const w = await fetch(url, { method: 'PUT', body: JSON.stringify(body) });
     if (!w.ok) throw new Error('HTTP ' + w.status);
     poll();
   } catch (e) { alert('No se pudo confirmar el cambio: ' + e.message); }
