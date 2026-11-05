@@ -6,7 +6,12 @@ import android.widget.TextView
 
 /** Configuration and choice adapter helpers for PageActivity screens. */
 
-fun PageActivity.choice(parent: LinearLayout, options: List<Pair<String, String>>, selectedKey: String): () -> String {
+fun PageActivity.choice(
+    parent: LinearLayout,
+    options: List<Pair<String, String>>,
+    selectedKey: String,
+    onSelected: ((String) -> Unit)? = null
+): () -> String {
     var current = selectedKey
     val views = ArrayList<TextView>()
     fun paint() {
@@ -24,6 +29,7 @@ fun PageActivity.choice(parent: LinearLayout, options: List<Pair<String, String>
         v.setOnClickListener {
             current = key
             paint()
+            onSelected?.invoke(key)
         }
         views.add(v)
         val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)

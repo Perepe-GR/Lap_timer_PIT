@@ -53,10 +53,14 @@ class SessionSettingsActivity : PageActivity() {
         val gpsChoice = choice(cGps, gpsOpts, settings.gpsSource)
 
         val cTheme = card("Color Theme & Palette")
-        label(cTheme, "Select UI color palette:")
+        label(cTheme, "Select UI color palette (applied instantly):")
         val themeOpts = ThemeManager.THEMES.map { it.id to "${it.name} · ${it.description}" }
         val currentThemeId = ThemeManager.getTheme(this).id
-        val themeChoice = choice(cTheme, themeOpts, currentThemeId)
+        choice(cTheme, themeOpts, currentThemeId) { chosenTheme ->
+            if (chosenTheme.isNotBlank()) {
+                ThemeManager.setTheme(this@SessionSettingsActivity, chosenTheme)
+            }
+        }
 
         val c3 = card("Delta Reference & Out/In Lap Rules")
         val scope = choice(
@@ -103,12 +107,8 @@ class SessionSettingsActivity : PageActivity() {
                 settings.saveTrace = swTrace.isChecked
                 settings.gpsSource = gpsChoice()
 
-                val chosenTheme = themeChoice()
-                if (chosenTheme.isNotBlank()) {
-                    ThemeManager.setTheme(this@SessionSettingsActivity, chosenTheme)
-                }
+                // Theme is already applied instantly on click
 
-                toast("Settings saved successfully")
                 finish()
             }
         )
@@ -116,7 +116,6 @@ class SessionSettingsActivity : PageActivity() {
 
     private fun shareLink(panel: String, db: String, room: String) {
         if (panel.isBlank() || db.isBlank()) {
-            toast("Firebase URL or Pit Panel URL missing")
             return
         }
         val sep = if (panel.contains("?")) "&" else "?"
@@ -132,17 +131,16 @@ class SessionSettingsActivity : PageActivity() {
         try {
             val f = Backup.create(this, traces)
             Export.shareFile(this, f, "application/zip")
-        } catch (e: Exception) {
-            toast("Error creating backup: ${e.message}")
+        } catch (_: Exception) {
+            // ignore
         }
     }
 
     private fun doRestore(uri: Uri) {
         try {
-            val n = Backup.restore(this, uri)
-            toast("Backup restored successfully ($n files)")
-        } catch (e: Exception) {
-            toast("Error restoring backup: ${e.message}")
+            Backup.restore(this, uri)
+        } catch (_: Exception) {
+            // ignore
         }
     }
 }
