@@ -81,9 +81,8 @@
 
 <main>
   <section class="card" id="cfg">
-    <div class="label">Conexión</div>
-    <p class="small">URL de Firebase Realtime Database y código de sala (el mismo que en las apps de los drivers).</p>
-    <input id="dbIn" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com" style="margin-bottom:8px">
+    <div class="label">Acceso a Sala</div>
+    <p class="small">Introduce el código de sala (Team Name) y el PIN de acceso.</p>
     <input id="roomIn" placeholder="CÓDIGO DE SALA" style="margin-bottom:8px">
     <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN de la sala (4-6 dígitos)" style="margin-bottom:8px" autocomplete="off">
     <input id="nameIn" placeholder="Tu nombre (opcional)" style="margin-bottom:8px" autocomplete="off">
@@ -168,10 +167,8 @@
 <script>
 const $ = id => document.getElementById(id);
 const q = new URLSearchParams(location.search);
-const DEFAULT_DB = 'https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app';
-let db = (q.get('db') || localStorage.getItem('db') || DEFAULT_DB).replace(/\/+$/, '');
+const db = 'https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app';
 let room = (q.get('room') || localStorage.getItem('room') || '').toUpperCase();
-if (q.get('db')) localStorage.setItem('db', db);
 if (q.get('room')) localStorage.setItem('room', room);
 
 function esc(s) {
@@ -439,7 +436,7 @@ async function joinRoom(pin, wanted, name) {
   setRole(wanted);
 }
 async function init() {
-  if (!db || !room) { $('cfg').style.display = 'block'; return; }
+  if (!room) { $('cfg').style.display = 'block'; return; }
   try {
     await ensureAuth();
     const m = await fetchMember();
@@ -448,9 +445,8 @@ async function init() {
   } catch (e) { $('cfg').style.display = 'block'; $('cfgErr').textContent = e.message; }
 }
 
-// ---- Consultas en vivo y pilotos pendientes de admisión ----
 async function poll() {
-  if (!db || !room) return;
+  if (!room) return;
   try {
     const r = await authFetch('/live.json', { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -467,7 +463,7 @@ async function poll() {
 }
 
 async function pollPending() {
-  if (!db || !room || role !== 'crew_chief') return;
+  if (!room || role !== 'crew_chief') return;
   try {
     const r = await authFetch('/pending.json', { cache: 'no-store' });
     if (!r.ok) return;
@@ -508,7 +504,7 @@ window.acceptPendingPilot = async function(key, pilotId, pilotName, uid) {
 };
 
 async function pollLaps() {
-  if (!db || !room || !selCar) return;
+  if (!room || !selCar) return;
   try {
     const rs = cars[selCar] && cars[selCar].raceStart;
     const qs = rs ? '?orderBy=%22%24key%22&startAt=%22L' + rs + '%22' : '?orderBy=%22%24key%22&limitToLast=10';
@@ -615,10 +611,9 @@ $('cars').addEventListener('click', e => {
 // ---- Ajustes ----
 $('cfgLink').addEventListener('click', e => { e.preventDefault(); $('cfg').style.display = 'block'; });
 $('saveCfg').addEventListener('click', async () => {
-  db = $('dbIn').value.trim().replace(/\/+$/, '');
   room = $('roomIn').value.trim().toUpperCase();
   nCars = Math.max(1, Math.min(30, parseInt($('carsIn').value, 10) || 1));
-  localStorage.setItem('db', db); localStorage.setItem('room', room); localStorage.setItem('nCars', String(nCars));
+  localStorage.setItem('room', room); localStorage.setItem('nCars', String(nCars));
   $('roomShow').textContent = room || '-';
   $('cfgErr').textContent = '';
   try {
@@ -652,7 +647,7 @@ function raceItem(car, id, r) {
     '<button data-act="delrace" data-car="' + esc(car) + '" data-id="' + esc(id) + '" style="margin-top:8px">Borrar resumen</button></details>';
 }
 async function loadRaces() {
-  if (!db || !room) { $('racesList').textContent = 'Falta configurar la conexión.'; return; }
+  if (!room) { $('racesList').textContent = 'Falta configurar la conexión.'; return; }
   $('racesList').textContent = 'Cargando…';
   try {
     const r = await authFetch('/races.json', { cache: 'no-store' });
@@ -679,7 +674,7 @@ $('racesList').addEventListener('click', async e => {
 
 // ---- Limpieza ----
 async function cleanLegacy() {
-  if (!db || !room) { $('cleanMsg').textContent = 'Falta configurar la conexión.'; return; }
+  if (!room) { $('cleanMsg').textContent = 'Falta configurar la conexión.'; return; }
   if (!confirm('¿Continuar con la limpieza?')) return;
   $('cleanMsg').textContent = 'Limpiando…';
   let n = 0;
@@ -710,7 +705,7 @@ async function cleanLegacy() {
 }
 $('cleanBtn').addEventListener('click', cleanLegacy);
 
-$('dbIn').value = db; $('roomIn').value = room; $('carsIn').value = nCars;
+$('roomIn').value = room; $('carsIn').value = nCars;
 applyRole();
 $('roomShow').textContent = room || '-';
 init();
