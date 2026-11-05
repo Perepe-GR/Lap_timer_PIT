@@ -172,6 +172,10 @@ class EnduranceSyncClient(
         request("PUT", "rooms/$code/pending/$pilotId", JSONObject(acceptedPending.toMap()).toString())
     }
 
+    suspend fun rejectPilot(code: String, pilotId: String): Result<Unit> = runCatching {
+        request("PUT", "rooms/$code/pending/$pilotId", "null")
+    }
+
     suspend fun setSessionState(code: String, state: String): Result<Unit> = runCatching {
         request("PUT", "rooms/$code/session/state", JSONObject.quote(state))
     }
