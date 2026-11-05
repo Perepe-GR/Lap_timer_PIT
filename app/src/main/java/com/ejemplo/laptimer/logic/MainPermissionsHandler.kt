@@ -8,6 +8,7 @@ import android.os.SystemClock
 import android.view.View
 import com.ejemplo.laptimer.MainActivity
 import com.ejemplo.laptimer.NmeaEvent
+import com.ejemplo.laptimer.BatteryEstimator
 import com.ejemplo.laptimer.session.*
 
 fun MainActivity.connectGps() {
@@ -92,9 +93,22 @@ fun MainActivity.computeAlert(): Pair<String, Boolean>? {
         return Pair("STINT: LAP LIMIT EXCEEDED", true)
     }
     if (now < pitFailUntil) return Pair(pitFailText, true)
-    val bat = batteryLevel()
-    val charging = isCharging()
-    if (!charging && bat <= settings.batCrit) return Pair("CRITICAL BATTERY $bat %", true)
+    val batInfo = BatteryEstimator.update(this)
+    val tteStr = if (!batInfo.isCharging && batInfo.remainingMinutes > 0) {
+        val h = batInfo.remainingMinutes / 60
+        val m = batInfo.remainingMinutes % 60
+        if (h > 0) " (~${h}h ${m}m left)" else " (~${m}m left)"
+    } else {
+        ""
+    }
+
+    if (!batInfo.isCharging && batInfo.remainingMinutes in 1..20) {
+        return Pair("CRITICAL BATTERY: ${batInfo.percentage}%$tteStr (Under 20m left!)", true)
+    }
+    if (!batInfo.isCharging && batInfo.remainingMinutes in 21..35) {
+        return Pair("LOW BATTERY: ${batInfo.percentage}%$tteStr (Under 35m left)", false)
+    }
+    if (!batInfo.isCharging && batInfo.percentage <= settings.batCrit) return Pair("CRITICAL BATTERY ${batInfo.percentage}%", true)
     if (endurance && s.maxMin > 0 && started && el >= (s.maxMin - 5) * 60_000L) {
         val left = ((s.maxMin * 60_000L) - el + 59_999L) / 60_000L
         return Pair("STINT: $left MIN REMAINING FOR MAX", false)
@@ -102,7 +116,7 @@ fun MainActivity.computeAlert(): Pair<String, Boolean>? {
     if (endurance && s.plan > 0 && s.lapsDone >= s.plan) {
         return Pair("STINT: PLANNED LAPS COMPLETED", false)
     }
-    if (!charging && bat <= settings.batWarn) return Pair("LOW BATTERY $bat %", false)
+    if (!batInfo.isCharging && batInfo.percentage <= settings.batWarn) return Pair("LOW BATTERY ${batInfo.percentage}%", false)
     return null
 }
 

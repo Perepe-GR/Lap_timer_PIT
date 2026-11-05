@@ -8,11 +8,24 @@ import com.ejemplo.laptimer.logic.*
 import java.util.Locale
 
 fun MainActivity.renderGps() {
-    bindings.txtGps.text = when {
+    val batInfo = BatteryEstimator.update(this)
+    val batText = if (batInfo.isCharging) {
+        "⚡ ${batInfo.percentage}%"
+    } else if (batInfo.remainingMinutes > 0) {
+        val h = batInfo.remainingMinutes / 60
+        val m = batInfo.remainingMinutes % 60
+        val timeStr = if (h > 0) "${h}h ${m}m" else "${m}m"
+        "🔋 ${batInfo.percentage}% (${timeStr})"
+    } else {
+        "🔋 ${batInfo.percentage}%"
+    }
+
+    val gpsStr = when {
         demoActive -> String.format(Locale.US, "DEMO ×%d · Simulated GPS %.0f Hz", demoFactor, hz)
         !hasFix -> "No GPS signal"
-        else -> String.format(Locale.US, "GPS %.0f Hz · %d sat · HDOP %.1f · Alt %.0f m", hz, sats, hdop, altitude)
+        else -> String.format(Locale.US, "GPS %.0f Hz · %d sat · HDOP %.1f", hz, sats, hdop)
     }
+    bindings.txtGps.text = "$gpsStr  ·  $batText"
 }
 
 fun MainActivity.renderNet() {
@@ -49,7 +62,7 @@ fun MainActivity.refreshTop() {
     val name = reconName
     bindings.txtTop.text = when {
         name != null -> "Recon «$name» · FINISH ${if (draftFinish != null) "✔" else "—"} · sectors ${draftSectors.size}"
-        demoActive -> "DEMO ×$demoFactor · tap to change speed"
+        demoActive -> "DEMO ×%d · tap to change speed"
         circuit == null -> "No active track · go to HOME > CIRCUITS"
         else -> "${circuit?.name} · Cross FINISH to start"
     }
