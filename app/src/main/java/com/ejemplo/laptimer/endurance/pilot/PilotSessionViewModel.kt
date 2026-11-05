@@ -20,7 +20,8 @@ data class PilotUiState(
     val gpsValid: Boolean = true,
     val syncStatus: String = "Online",
     val unexpectedMovement: Boolean = false,
-    val estimatedStintMinutes: Int = 30
+    val estimatedStintMinutes: Int = 30,
+    val tacticalInstruction: EnduranceSyncClient.TacticalInstruction? = null
 )
 
 class PilotSessionViewModel(application: Application) : AndroidViewModel(application) {
@@ -54,6 +55,12 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
                     }
                 }
             }
+            launch {
+                val carKey = settings.carKey()
+                syncClient.observeInstructions(teamCode, carKey).collect { instr ->
+                    _uiState.value = _uiState.value.copy(tacticalInstruction = instr)
+                }
+            }
         }
     }
 
@@ -72,6 +79,10 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
     fun dismissUnexpectedMovement() {
         highSpeedCount = 0
         _uiState.value = _uiState.value.copy(unexpectedMovement = false)
+    }
+
+    fun dismissInstruction() {
+        _uiState.value = _uiState.value.copy(tacticalInstruction = null)
     }
 
     fun onLapCompleted(teamCode: String, myPilotId: String, lap: LapRecord) {

@@ -176,6 +176,32 @@ class EnduranceSyncClient(
         request("PUT", "rooms/$code/pending/$pilotId", "null")
     }
 
+    data class TacticalInstruction(val text: String = "", val bg: String = "amarillo")
+
+    fun observeInstructions(code: String, carKey: String): Flow<TacticalInstruction?> = flow {
+        while (true) {
+            runCatching {
+                val res = request("GET", "rooms/$code/inbox/$carKey")
+                if (res.isNotBlank() && res != "null") {
+                    val trimmed = res.trim()
+                    if (trimmed.startsWith("{")) {
+                        val root = JSONObject(trimmed)
+                        val keys = root.keys()
+                        val list = mutableListOf<String>()
+                        while (keys.hasNext()) list.add(keys.next())
+                        list.sort()
+                        val latestKey = list.lastOrNull()
+                        if (latestKey != null) {
+                            val obj = root.getJSONObject(latestKey)
+                            emit(TacticalInstruction(obj.optString("text", ""), obj.optString("bg", "amarillo")))
+                        }
+                    }
+                }
+            }
+            delay(3000L)
+        }
+    }
+
     suspend fun setSessionState(code: String, state: String): Result<Unit> = runCatching {
         request("PUT", "rooms/$code/session/state", JSONObject.quote(state))
     }

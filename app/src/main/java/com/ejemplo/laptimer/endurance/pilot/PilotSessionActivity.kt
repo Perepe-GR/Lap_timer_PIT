@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -11,7 +12,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -25,6 +25,8 @@ class PilotSessionActivity : AppCompatActivity() {
     private lateinit var txtTimer: TextView
     private lateinit var txtBest: TextView
     private lateinit var txtGpsStatus: TextView
+    private lateinit var instructionBanner: LinearLayout
+    private lateinit var txtInstruction: TextView
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
@@ -63,6 +65,38 @@ class PilotSessionActivity : AppCompatActivity() {
         }
         navHeader.addView(navTitle)
         rootLayout.addView(navHeader)
+
+        // Floating Tactical Instruction Banner (Initially GONE)
+        instructionBanner = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.parseColor("#FACC15"))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            visibility = View.GONE
+        }
+        txtInstruction = TextView(this).apply {
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#141413"))
+        }
+        instructionBanner.addView(txtInstruction, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        val btnCloseBanner = TextView(this).apply {
+            text = "✕"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#141413"))
+            setPadding(dp(10), 0, 0, 0)
+            setOnClickListener {
+                instructionBanner.visibility = View.GONE
+                viewModel.dismissInstruction()
+            }
+        }
+        instructionBanner.addView(btnCloseBanner)
+
+        val lpBanner = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lpBanner.bottomMargin = dp(16)
+        rootLayout.addView(instructionBanner, lpBanner)
 
         txtHeader = TextView(this).apply {
             textSize = 22f
@@ -146,6 +180,24 @@ class PilotSessionActivity : AppCompatActivity() {
                 } else {
                     txtGpsStatus.text = "GPS Active · ${state.syncStatus}"
                     txtGpsStatus.setTextColor(Color.parseColor("#C6F432"))
+                }
+
+                val instr = state.tacticalInstruction
+                if (instr != null && instr.text.isNotBlank()) {
+                    instructionBanner.visibility = View.VISIBLE
+                    txtInstruction.text = "PIT: ${instr.text}"
+                    val bgCol = when (instr.bg) {
+                        "rojo" -> Color.parseColor("#EF4444")
+                        "verde" -> Color.parseColor("#22C55E")
+                        "azul" -> Color.parseColor("#2563EB")
+                        "blanco" -> Color.parseColor("#F2F4F7")
+                        else -> Color.parseColor("#FACC15")
+                    }
+                    val fgCol = if (instr.bg == "rojo" || instr.bg == "azul") Color.WHITE else Color.parseColor("#141413")
+                    instructionBanner.setBackgroundColor(bgCol)
+                    txtInstruction.setTextColor(fgCol)
+                } else {
+                    instructionBanner.visibility = View.GONE
                 }
 
                 if (state.unexpectedMovement) {
