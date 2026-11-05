@@ -3,9 +3,6 @@ package com.ejemplo.laptimer
 import android.content.Context
 import com.ejemplo.laptimer.net.NetSettingsStore
 import com.ejemplo.laptimer.net.StintTarget
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 
 /** Ajustes de red, de sesión y estado del stint, guardados en el móvil. */
@@ -112,13 +109,9 @@ class NetSettings(context: Context) {
     }
 
     fun saveStrategy(list: List<StintTarget>) {
-        lifecycleScope.launch {
-            val arr = JSONArray()
-            for (t in list) arr.put(t.toJson())
-            withContext(Dispatchers.IO) {
-                strategyJson = arr.toString()
-            }
-        }
+        val arr = JSONArray()
+        for (t in list) arr.put(t.toJson())
+        strategyJson = arr.toString()
     }
 
     fun targetFor(n: Int): StintTarget {
