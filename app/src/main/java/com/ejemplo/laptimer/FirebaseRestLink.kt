@@ -101,6 +101,7 @@ class FirebaseRestLink(
                 pendingLaps.poll()
             }
             fetchMessages(car)
+            fetchInstructions()
             fetchCommand(car)
             if (!first && !purged) purgeInbox(car)
             onStatus(NetStatus.OK)
@@ -141,6 +142,21 @@ class FirebaseRestLink(
             if (text.isNotBlank()) msgs.add(PitMessage(k, text, bg))
         }
         if (msgs.isNotEmpty()) onMessages(msgs)
+    }
+
+    private fun fetchInstructions() {
+        try {
+            val txt = request("GET", "instructions", null, "").trim()
+            if (txt.isNotEmpty() && txt != "null") {
+                val obj = JSONObject(txt)
+                val text = obj.optString("text", "")
+                val bg = obj.optString("bg", "amarillo")
+                val t = obj.optLong("t", System.currentTimeMillis())
+                if (text.isNotBlank()) {
+                    onMessages(listOf(PitMessage("inst-$t", text, bg)))
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     private fun purgeInbox(car: String) {
