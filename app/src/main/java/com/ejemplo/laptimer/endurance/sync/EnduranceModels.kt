@@ -27,6 +27,7 @@ data class PendingPilot(
     val id: String = "",
     val name: String = "",
     val uid: String = "",
+    val status: String = "PENDING", // PENDING, ACCEPTED, REJECTED
     val requestedAt: Long = 0L
 )
 

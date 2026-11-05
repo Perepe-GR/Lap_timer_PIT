@@ -34,6 +34,7 @@ fun PendingPilot.toMap(): Map<String, Any?> = mapOf(
     "id" to id,
     "name" to name,
     "uid" to uid,
+    "status" to status,
     "requestedAt" to requestedAt
 )
 
@@ -41,6 +42,7 @@ fun pendingPilotFromMap(map: Map<String, Any?>): PendingPilot = PendingPilot(
     id = map["id"]?.toString() ?: "",
     name = map["name"]?.toString() ?: "",
     uid = map["uid"]?.toString() ?: "",
+    status = map["status"]?.toString() ?: "PENDING",
     requestedAt = (map["requestedAt"] as? Number)?.toLong() ?: (map["requestedAt"] as? String)?.toLongOrNull() ?: 0L
 )
 
