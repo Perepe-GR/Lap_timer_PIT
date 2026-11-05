@@ -265,3 +265,21 @@
 
 # 2026-11-05 01:12:37.497963
 +Y
+
+# 2026-11-05 23:57:42.349020
++Revisa los botones de guardado en la interfaz de configuración (específicamente: "save track day", "save sprint setup" y "save long run"). Actualmente se quedan bloqueados, no ejecutan la persistencia correctamente y no redirigen al usuario al menú principal. 
++1. Revisa los `onClickListeners` o la lógica de navegación asociada a estos tres botones.
++2. Asegúrate de que la función de guardado (en base de datos local o preferencias) se ejecute de manera síncrona o con corrutinas adecuadas sin bloquear el hilo principal.
++3. Añade la orden explícita de navegación o fin de activity/fragment (`finish()`, `popBackStack()` o transición de intent) para que, una vez completado el guardado con éxito, la aplicación devuelva automáticamente al usuario al menú principal.
+
+# 2026-11-05 23:58:08.131318
++Y
+
+# 2026-11-05 23:58:10.589343
++y
+
+# 2026-11-05 23:58:44.180815
++no descarta los cambios
+
+# 2026-11-05 23:59:44.916188
++add *md in the context

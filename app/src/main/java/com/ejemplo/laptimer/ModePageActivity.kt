@@ -24,7 +24,6 @@ class ModePageActivity : PageActivity() {
         val topCard = card("Race Mode Selection")
         segmentedTabs(topCard, modes, settings.raceMode) { selected ->
             settings.raceMode = selected
-            toast("Active mode: ${modes.firstOrNull { it.first == selected }?.second ?: selected}")
             rebuild()
         }
 
@@ -44,26 +43,24 @@ class ModePageActivity : PageActivity() {
             addButton(formCard, button("SAVE SPRINT SETUP", true) {
                 val driver = etDriver.text.toString().trim()
                 if (driver.isBlank()) {
-                    toast("Driver name is required")
                     return@button
                 }
                 settings.carName = etCar.text.toString().trim()
                 settings.driverName = driver
                 settings.sprintLaps = etLaps.text.toString().toIntOrNull() ?: 0
                 settings.sprintMin = etMin.text.toString().toIntOrNull() ?: 0
-                toast("Sprint setup saved successfully")
+                finish()
             })
         } else {
             val btnText = if (settings.raceMode == "trackday") "SAVE TRACK DAY SETUP" else "SAVE LONG RUN SETUP"
             addButton(formCard, button(btnText, true) {
                 val driver = etDriver.text.toString().trim()
                 if (driver.isBlank()) {
-                    toast("Driver name is required")
                     return@button
                 }
                 settings.carName = etCar.text.toString().trim()
                 settings.driverName = driver
-                toast("Setup saved successfully")
+                finish()
             })
         }
     }
