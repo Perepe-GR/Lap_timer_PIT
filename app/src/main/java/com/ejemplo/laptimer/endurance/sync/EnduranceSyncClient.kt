@@ -57,40 +57,53 @@ class EnduranceSyncClient(
         }
     }
 
-    suspend fun createTeam(code: String, name: String, circuitId: String, leaderUid: String, pin: String): Result<Unit> = runCatching {
-        Log.i(TAG, "createTeam STARTED for code: $code, name: $name, circuit: $circuitId")
+    suspend fun connectOrCreateRoom(code: String, pin: String, role: String, name: String, circuitId: String): Result<TeamMeta> = runCatching {
+        Log.i(TAG, "connectOrCreateRoom STARTED for code: $code, role: $role, name: $name")
         val currentUid = FirebaseAuthManager.ensureAuthenticated()
-        Log.i(TAG, "createTeam Auth Verified: currentUid=$currentUid")
-        val actualLeaderUid = currentUid
-        val salt = HashUtils.generateSalt()
-        val pinHash = HashUtils.sha256(salt, pin)
+        val cleanCode = code.trim().uppercase()
+        val metaRes = fetchTeamMeta(cleanCode)
+        val meta = metaRes.getOrNull()
 
-        val meta = TeamMeta(
-            code = code,
-            name = name,
-            circuitId = circuitId,
-            createdBy = actualLeaderUid,
-            createdAt = System.currentTimeMillis(),
-            pinHash = pinHash,
-            salt = salt,
-            leaderUid = actualLeaderUid,
-            mode = "endurance"
-        )
-        val jsonPayload = JSONObject(meta.toMap()).toString()
+        if (meta == null) {
+            // Creation logic (Room does NOT exist)
+            val salt = HashUtils.generateSalt()
+            val pinHash = HashUtils.sha256(salt, pin)
+            val newMeta = TeamMeta(
+                code = cleanCode,
+                name = name.ifBlank { cleanCode },
+                circuitId = circuitId.ifBlank { "Circuit 1" },
+                createdBy = currentUid,
+                createdAt = System.currentTimeMillis(),
+                pinHash = pinHash,
+                salt = salt,
+                leaderUid = currentUid,
+                mode = "endurance"
+            )
+            val jsonPayload = JSONObject(newMeta.toMap()).toString()
+            request("PUT", "rooms/$cleanCode/meta", jsonPayload)
+            request("PUT", "rooms/$cleanCode/strategy/leaderUid", JSONObject().put("uid", currentUid).toString())
+            request("PUT", "rooms/$cleanCode/session", JSONObject(SessionState("LOBBY", "", 0L, 0L).toMap()).toString())
+            registerMember(cleanCode, currentUid, if (role == "CREW_CHIEF") "crew_chief" else "pilot", name).getOrThrow()
+            Log.i(TAG, "Room created successfully: $cleanCode")
+            newMeta
+        } else {
+            // Reconnection logic (Room DOES exist)
+            val isValidPin = if (meta.pinHash.isNotBlank()) {
+                HashUtils.sha256(meta.salt, pin.trim()) == meta.pinHash
+            } else {
+                meta.code == pin.trim()
+            }
+            if (!isValidPin) {
+                throw SecurityException("Incorrect PIN for existing room")
+            }
+            registerMember(cleanCode, currentUid, if (role == "CREW_CHIEF") "crew_chief" else "pilot", name).getOrThrow()
+            Log.i(TAG, "Reconnected to room successfully: $cleanCode")
+            meta
+        }
+    }
 
-        Log.d(TAG, "Writing /rooms/$code/meta...")
-        request("PUT", "rooms/$code/meta", jsonPayload)
-
-        Log.d(TAG, "Writing /rooms/$code/strategy/leaderUid...")
-        request("PUT", "rooms/$code/strategy/leaderUid", JSONObject().put("uid", actualLeaderUid).toString())
-
-        Log.d(TAG, "Writing /rooms/$code/session...")
-        request("PUT", "rooms/$code/session", JSONObject(SessionState("LOBBY", "", 0L, 0L).toMap()).toString())
-
-        Log.d(TAG, "Registering member under /rooms/$code/members/$actualLeaderUid...")
-        registerMember(code, actualLeaderUid, "crew_chief", name)
-
-        Log.i(TAG, "createTeam SUCCESS for room $code with leaderUid=$actualLeaderUid")
+    suspend fun createTeam(code: String, name: String, circuitId: String, leaderUid: String, pin: String): Result<Unit> = runCatching {
+        connectOrCreateRoom(code, pin, "CREW_CHIEF", name, circuitId).getOrThrow()
     }
 
     suspend fun registerMember(code: String, uid: String, role: String, name: String): Result<Unit> = runCatching {
@@ -124,10 +137,23 @@ class EnduranceSyncClient(
         request("PUT", "rooms/$code/pending/$pilotId", JSONObject(pending.toMap()).toString())
     }
 
-    suspend fun joinTeam(code: String, pilotId: String, pilotName: String): Result<Unit> = runCatching {
+    suspend fun joinTeam(code: String, inputPin: String, pilotId: String, pilotName: String): Result<TeamMeta> = runCatching {
         val currentUid = FirebaseAuthManager.ensureAuthenticated()
-        Log.i(TAG, "joinTeam (Request Access): code=$code, pilotId=$pilotId, pilotName=$pilotName, currentUid=$currentUid")
-        requestJoin(code, pilotId, pilotName, currentUid).getOrThrow()
+        val cleanCode = code.trim().uppercase()
+        val metaRes = fetchTeamMeta(cleanCode)
+        val meta = metaRes.getOrThrow() ?: throw IOException("Team code not found")
+
+        val isValidPin = if (meta.pinHash.isNotBlank()) {
+            HashUtils.sha256(meta.salt, inputPin.trim()) == meta.pinHash
+        } else {
+            meta.code == inputPin.trim()
+        }
+        if (!isValidPin) {
+            throw SecurityException("Incorrect PIN")
+        }
+
+        requestJoin(cleanCode, pilotId, pilotName, currentUid).getOrThrow()
+        meta
     }
 
     fun observePendingPilots(code: String): Flow<Map<String, PendingPilot>> = flow {

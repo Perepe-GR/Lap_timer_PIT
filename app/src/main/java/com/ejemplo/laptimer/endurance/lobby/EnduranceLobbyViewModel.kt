@@ -117,7 +117,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 _uiState.value = _uiState.value.copy(error = "Incorrect PIN")
                 return@launch
             }
-            val joinRes = syncClient.joinTeam(cleanCode, pilotId, pilotName)
+            val joinRes = syncClient.joinTeam(cleanCode, inputPin, pilotId, pilotName)
             if (joinRes.isSuccess) {
                 _uiState.value = _uiState.value.copy(
                     teamCode = cleanCode,
