@@ -120,7 +120,7 @@ class EnduranceSyncClient(
     }
 
     suspend fun requestJoin(code: String, pilotId: String, pilotName: String, uid: String): Result<Unit> = runCatching {
-        val pending = PendingPilot(id = pilotId, name = pilotName, uid = uid, requestedAt = System.currentTimeMillis())
+        val pending = PendingPilot(id = pilotId, name = pilotName, uid = uid, status = "PENDING", requestedAt = System.currentTimeMillis())
         request("PUT", "rooms/$code/pending/$pilotId", JSONObject(pending.toMap()).toString())
     }
 
@@ -168,7 +168,8 @@ class EnduranceSyncClient(
         request("PUT", "rooms/$code/pilots/$pilotId/info", JSONObject(info.toMap()).toString())
         val member = MemberInfo(role = "pilot", name = pilotName, t = System.currentTimeMillis())
         request("PUT", "rooms/$code/members/$uid", JSONObject(member.toMap()).toString())
-        request("PUT", "rooms/$code/pending/$pilotId", "null")
+        val acceptedPending = PendingPilot(id = pilotId, name = pilotName, uid = uid, status = "ACCEPTED", requestedAt = System.currentTimeMillis())
+        request("PUT", "rooms/$code/pending/$pilotId", JSONObject(acceptedPending.toMap()).toString())
     }
 
     suspend fun setSessionState(code: String, state: String): Result<Unit> = runCatching {
