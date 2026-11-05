@@ -100,7 +100,7 @@
 
   <section class="card crewonly" id="pendingSection" style="display:none">
     <div class="label">Solicitudes de Pilotos Pendientes (Admisión)</div>
-    <div class="small">Pilotos solicitando unirse a la sala. Haz clic en "Aceptar" para darles acceso a la sesión.</div>
+    <div class="small">Pilotos solicitando unirse a la sala. Acepta para admitir o rechaza para denegar el acceso.</div>
     <div id="pendingList" style="margin-top:10px"></div>
   </section>
 
@@ -486,7 +486,10 @@ async function pollPending() {
       const p = data[k];
       return '<div style="display:flex;justify-content:space-between;align-items:center;background:#0B0D10;padding:8px 12px;border-radius:10px;margin-bottom:6px;">' +
         '<span><b>' + esc(p.name || k) + '</b> (Solicitud ID: ' + esc(p.id) + ')</span>' +
-        '<button class="primary" onclick="acceptPendingPilot(\'' + esc(k) + '\', \'' + esc(p.id) + '\', \'' + esc(p.name) + '\', \'' + esc(p.uid) + '\')">Aceptar</button>' +
+        '<div>' +
+        '<button class="primary" onclick="acceptPendingPilot(\'' + esc(k) + '\', \'' + esc(p.id) + '\', \'' + esc(p.name) + '\', \'' + esc(p.uid) + '\')" style="margin-right:6px">Aceptar</button>' +
+        '<button style="background:#EF4444;color:#fff;border:0" onclick="rejectPendingPilot(\'' + esc(k) + '\')">Rechazar</button>' +
+        '</div>' +
         '</div>';
     }).join('');
   } catch (e) { /* ignore */ }
@@ -537,12 +540,24 @@ window.acceptPendingPilot = async function(key, pilotId, pilotName, uid) {
     await authFetch('/members/' + encodeURIComponent(uid) + '.json', {
       method: 'PUT', body: JSON.stringify({ role: 'pilot', name: pilotName, t: Date.now() })
     });
+    const accepted = { id: pilotId, name: pilotName, uid: uid, status: 'ACCEPTED', requestedAt: Date.now() };
+    await authFetch('/pending/' + encodeURIComponent(key) + '.json', {
+      method: 'PUT', body: JSON.stringify(accepted)
+    });
+    pollPending();
+  } catch (e) {
+    alert('No se pudo aceptar al piloto: ' + e.message);
+  }
+};
+
+window.rejectPendingPilot = async function(key) {
+  try {
     await authFetch('/pending/' + encodeURIComponent(key) + '.json', {
       method: 'PUT', body: 'null'
     });
     pollPending();
   } catch (e) {
-    alert('No se pudo aceptar al piloto: ' + e.message);
+    alert('No se pudo rechazar al piloto: ' + e.message);
   }
 };
 
@@ -601,12 +616,12 @@ function openSwap(k) {
   $('swNext').focus();
 }
 async function sendSwap() {
-  const next = $('swNext').value.trim();
+  const next = $('swNext'].value.trim();
   if (!next) { $('swErr').textContent = 'Escribe el nombre del driver que entra.'; return; }
   const body = {
     id: Date.now().toString(36), next: next,
-    laps: parseInt($('swLaps').value, 10) || 0, min: parseInt($('swMin').value, 10) || 0,
-    max: parseInt($('swMax').value, 10) || 0, pit: parseInt($('swPit').value, 10) || 0
+    laps: parseInt($('swLaps'].value, 10) || 0, min: parseInt($('swMin'].value, 10) || 0,
+    max: parseInt($('swMax'].value, 10) || 0, pit: parseInt($('swPit'].value, 10) || 0
   };
   try {
     const r = await authFetch('/cmd/' + encodeURIComponent(swCar) + '.json', { method: 'PUT', body: JSON.stringify(body) });
@@ -743,7 +758,7 @@ async function cleanLegacy() {
     $('cleanMsg').textContent = 'Listo: ' + n + ' elementos borrados.';
     poll();
   } catch (e) {
-    $('cleanMsg').textContent = 'No se pudo limpiar: ' + e.message.message;
+    $('cleanMsg').textContent = 'No se pudo limpiar: ' + e.message;
   }
 }
 $('cleanBtn').addEventListener('click', cleanLegacy);
