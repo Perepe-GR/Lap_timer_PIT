@@ -69,9 +69,9 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         _uiState.value = _uiState.value.copy(step = LobbyUiState.STEP_ROLE_SELECT, error = null)
     }
 
-    fun createTeam(code: String, name: String, circuitId: String, leaderUid: String) {
+    fun createTeam(teamName: String, pin: String, circuitId: String, leaderUid: String) {
         viewModelScope.launch {
-            val cleanCode = code.trim().uppercase()
+            val cleanCode = teamName.trim().uppercase()
             val currentUid = try {
                 FirebaseAuthManager.ensureAuthenticated()
             } catch (e: Exception) {
@@ -86,12 +86,11 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 return@launch
             }
 
-            val pin = cleanCode
-            val res = syncClient.createTeam(cleanCode, name, circuitId, currentUid, pin)
+            val res = syncClient.createTeam(cleanCode, teamName, circuitId, currentUid, pin)
             if (res.isSuccess) {
                 settings.saveEnduranceSession(cleanCode, "CREW_CHIEF", currentUid)
                 _uiState.value = _uiState.value.copy(
-                    teamCode = cleanCode, teamName = name, circuitId = circuitId, pin = pin,
+                    teamCode = cleanCode, teamName = teamName, circuitId = circuitId, pin = pin,
                     step = LobbyUiState.STEP_WAITING, error = null
                 )
                 startObserving(cleanCode)

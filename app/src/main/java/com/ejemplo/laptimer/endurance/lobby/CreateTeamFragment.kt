@@ -58,7 +58,6 @@ class CreateTeamFragment : Fragment() {
         title.setPadding(0, 0, 0, dp(16))
         root.addView(title)
 
-        // Simplified fields: Team Name and numeric Team PIN / Code default "1234" (max 6 digits)
         val etTeamName = inputField("Team Name (6-15 chars)", "Empuria", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS, 15)
         val etCode = inputField("Team PIN / Code (4-6 digits)", "1234", InputType.TYPE_CLASS_NUMBER, 6)
         root.addView(etTeamName)
@@ -66,7 +65,6 @@ class CreateTeamFragment : Fragment() {
         lpCode.topMargin = dp(12)
         root.addView(etCode, lpCode)
 
-        // Circuit Selector with clear label "Circuit" and consistent styling
         val lblCircuit = TextView(requireContext()).apply {
             text = "Circuit"
             textSize = 14f
@@ -133,7 +131,7 @@ class CreateTeamFragment : Fragment() {
             }
             if (!valid) return@setOnClickListener
 
-            (activity as? EnduranceLobbyActivity)?.viewModel?.createTeam(code, name, circuitName, "")
+            (activity as? EnduranceLobbyActivity)?.viewModel?.createTeam(name, code, circuitName, "")
         }
         val lpBtn = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))
         lpBtn.topMargin = dp(24)
