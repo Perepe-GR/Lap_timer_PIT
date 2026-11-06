@@ -19,6 +19,8 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.ejemplo.laptimer.NetSettings
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
@@ -42,6 +44,11 @@ class WaitingRoomFragment : Fragment() {
     private lateinit var btnStart: TextView
     private lateinit var btnCopyLink: TextView
     private lateinit var btnShareLink: TextView
+    private lateinit var btnRetry: TextView
+    private lateinit var txtTimeout: TextView
+
+    private var timeoutSeconds = 30
+    private var timerJob: Job? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val root = LinearLayout(requireContext())
@@ -119,6 +126,32 @@ class WaitingRoomFragment : Fragment() {
         }
         root.addView(pendingContainer)
 
+        txtTimeout = TextView(requireContext()).apply {
+            textSize = 14f
+            setTextColor(Color.parseColor("#9AA3AE"))
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(4))
+            visibility = View.GONE
+        }
+        root.addView(txtTimeout)
+
+        btnRetry = TextView(requireContext()).apply {
+            text = "Reintentar verificación de estado"
+            gravity = Gravity.CENTER
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#0B0D10"))
+            background = roundBg(Color.parseColor("#C6F432"), 10)
+            setPadding(0, dp(12), 0, dp(12))
+            visibility = View.GONE
+            setOnClickListener {
+                resetTimeout()
+            }
+        }
+        val lpRetry = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lpRetry.bottomMargin = dp(12)
+        root.addView(btnRetry, lpRetry)
+
         val lbl = TextView(requireContext())
         lbl.text = "Connected Drivers / Pilots:"
         lbl.textSize = 14f
@@ -146,7 +179,36 @@ class WaitingRoomFragment : Fragment() {
         root.addView(btnStart, lpBtn)
 
         observeState()
+        startTimeoutTimer()
         return root
+    }
+
+    private fun startTimeoutTimer() {
+        timerJob?.cancel()
+        timeoutSeconds = 30
+        timerJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (timeoutSeconds > 0) {
+                delay(1000L)
+                timeoutSeconds--
+                val vm = (activity as? EnduranceLobbyActivity)?.viewModel
+                val state = vm?.uiState?.value
+                if (state?.role == "PILOT" && state.step == LobbyUiState.STEP_WAITING) {
+                    txtTimeout.text = "Waiting for Crew Chief approval... (${timeoutSeconds}s)"
+                }
+            }
+            val vm = (activity as? EnduranceLobbyActivity)?.viewModel
+            val state = vm?.uiState?.value
+            if (state?.role == "PILOT" && state.step == LobbyUiState.STEP_WAITING) {
+                txtTimeout.text = "Connection timeout reached. Server response delayed."
+                btnRetry.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun resetTimeout() {
+        btnRetry.visibility = View.GONE
+        txtTimeout.text = "Rechecking status..."
+        startTimeoutTimer()
     }
 
     private fun getPitWallUrl(): String {
@@ -171,6 +233,8 @@ class WaitingRoomFragment : Fragment() {
                     btnStart.visibility = View.VISIBLE
                     btnCopyLink.visibility = View.VISIBLE
                     btnShareLink.visibility = View.VISIBLE
+                    txtTimeout.visibility = View.GONE
+                    btnRetry.visibility = View.GONE
 
                     if (state.pendingPilots.isNotEmpty()) {
                         lblPending.visibility = View.VISIBLE
@@ -183,11 +247,21 @@ class WaitingRoomFragment : Fragment() {
                                 background = roundBg(Color.parseColor("#12161B"), 10)
                                 setPadding(dp(12), dp(8), dp(12), dp(8))
                             }
-                            val tvName = TextView(requireContext()).apply {
+                            val tvName = LinearLayout(requireContext()).apply {
+                                orientation = LinearLayout.VERTICAL
+                            }
+                            val tvTitle = TextView(requireContext()).apply {
                                 text = p.name
                                 textSize = 16f
                                 setTextColor(Color.WHITE)
                             }
+                            val tvStatus = TextView(requireContext()).apply {
+                                text = "Status: ${p.status}"
+                                textSize = 12f
+                                setTextColor(Color.parseColor("#9AA3AE"))
+                            }
+                            tvName.addView(tvTitle)
+                            tvName.addView(tvStatus)
                             row.addView(tvName, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
                             val btnAccept = TextView(requireContext()).apply {
@@ -197,12 +271,30 @@ class WaitingRoomFragment : Fragment() {
                                 typeface = Typeface.DEFAULT_BOLD
                                 setTextColor(Color.parseColor("#0B0D10"))
                                 background = roundBg(Color.parseColor("#C6F432"), 8)
-                                setPadding(dp(16), dp(8), dp(16), dp(8))
+                                setPadding(dp(12), dp(8), dp(12), dp(8))
                                 setOnClickListener {
                                     vm.acceptPilot(state.teamCode, pId, p.name, p.uid)
                                 }
                             }
                             row.addView(btnAccept)
+
+                            val btnReject = TextView(requireContext()).apply {
+                                text = "REJECT"
+                                gravity = Gravity.CENTER
+                                textSize = 14f
+                                typeface = Typeface.DEFAULT_BOLD
+                                setTextColor(Color.WHITE)
+                                background = roundBg(Color.parseColor("#EF4444"), 8)
+                                setPadding(dp(12), dp(8), dp(12), dp(8))
+                                val lpReject = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                                lpReject.leftMargin = dp(8)
+                                layoutParams = lpReject
+                                setOnClickListener {
+                                    vm.rejectPilot(state.teamCode, p.uid.ifBlank { pId })
+                                }
+                            }
+                            row.addView(btnReject)
+
                             val lpRow = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                             lpRow.bottomMargin = dp(6)
                             pendingContainer.addView(row, lpRow)
@@ -218,6 +310,7 @@ class WaitingRoomFragment : Fragment() {
                     btnShareLink.visibility = View.GONE
                     lblPending.visibility = View.GONE
                     pendingContainer.visibility = View.GONE
+                    txtTimeout.visibility = View.VISIBLE
                 }
 
                 val lines = state.pilots.values.map { p ->
@@ -230,5 +323,10 @@ class WaitingRoomFragment : Fragment() {
                 }
             }
         }
+    }
+
+    override fun onDestroyView() {
+        timerJob?.cancel()
+        super.onDestroyView()
     }
 }

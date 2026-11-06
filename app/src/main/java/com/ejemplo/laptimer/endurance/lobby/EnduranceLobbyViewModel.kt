@@ -164,6 +164,16 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    fun rejectPilot(code: String, uid: String) {
+        viewModelScope.launch {
+            try {
+                syncClient.rejectPilot(code, uid)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Error al rechazar piloto: ${e.message}")
+            }
+        }
+    }
+
     fun startSession() {
         val code = _uiState.value.teamCode
         viewModelScope.launch {
