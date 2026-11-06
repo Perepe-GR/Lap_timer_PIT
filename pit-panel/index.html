@@ -49,7 +49,7 @@
             </form>
         </section>
         <section id="dashboard-section" class="hidden space-y-6">
-            <!-- Row 1: Tactical Dispatch & Pending Requests -->
+            <!-- Row 1: Tactical Dispatch & Driver Management -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Tactical Instruction Panel -->
                 <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-between space-y-4">
@@ -115,13 +115,26 @@
                     </div>
                 </div>
 
-                <!-- Pilot Access Requests Panel -->
-                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                    <h3 class="text-base font-bold mb-4 text-amber-400 flex items-center gap-2">
-                        <span>⏳ Pilot Access Requests (Pending)</span>
-                    </h3>
-                    <div id="pending-pilots-list" class="space-y-3">
-                        <p class="text-slate-500 text-sm italic">No pending access requests.</p>
+                <!-- Driver Management Column (Pending Requests & Accepted Roster) -->
+                <div class="space-y-6">
+                    <!-- Pilot Access Requests Panel -->
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                        <h3 class="text-base font-bold mb-4 text-amber-400 flex items-center gap-2">
+                            <span>⏳ Pilot Access Requests (Pending)</span>
+                        </h3>
+                        <div id="pending-pilots-list" class="space-y-3">
+                            <p class="text-slate-500 text-sm italic">No pending access requests.</p>
+                        </div>
+                    </div>
+
+                    <!-- Accepted Team Roster & Driver Assignment -->
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                        <h3 class="text-base font-bold mb-4 text-emerald-400 flex items-center gap-2">
+                            <span>👥 Accepted Team Roster & Driver Assignment</span>
+                        </h3>
+                        <div id="accepted-roster-list" class="space-y-3">
+                            <p class="text-slate-500 text-sm italic">No accepted pilots in roster.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -171,6 +184,8 @@
         firebase.initializeApp({ databaseURL: FIREBASE_URL });
         const db = firebase.database();
         let activeTeamName = null;
+        window.cachedRequests = null;
+        window.currentDrivingPilotId = null;
 
         // Firebase Connection State Listener & Automatic Reconnection Recovery
         db.ref('.info/connected').on('value', snap => {
@@ -285,15 +300,23 @@
 
         function initPitListeners(teamName) {
             db.ref(`rooms/${teamName}/requests`).on('value', snapshot => {
-                renderPendingRequests(teamName, snapshot.val());
+                renderRequestsAndRoster(teamName, snapshot.val());
             }, err => {
                 console.warn('Error reading requests:', err);
-                renderPendingRequests(teamName, null);
+                renderRequestsAndRoster(teamName, null);
             });
             db.ref(`rooms/${teamName}/pending`).on('value', snapshot => {
-                renderPendingRequests(teamName, snapshot.val());
+                renderRequestsAndRoster(teamName, snapshot.val());
             }, err => {
                 console.warn('Error reading pending:', err);
+            });
+            db.ref(`rooms/${teamName}/session/currentPilotId`).on('value', snapshot => {
+                window.currentDrivingPilotId = snapshot.val();
+                if (window.cachedRequests) {
+                    renderRequestsAndRoster(teamName, window.cachedRequests);
+                }
+            }, err => {
+                console.warn('Error reading currentPilotId:', err);
             });
             db.ref(`rooms/${teamName}/live`).on('value', snapshot => {
                 renderLiveTiming(snapshot.val());
@@ -302,43 +325,121 @@
             });
         }
 
-        function renderPendingRequests(teamName, requests) {
-            const container = document.getElementById('pending-pilots-list');
-            if (!container) return;
-            container.innerHTML = '';
+        function renderRequestsAndRoster(teamName, requests) {
+            window.cachedRequests = requests;
+            const pendingContainer = document.getElementById('pending-pilots-list');
+            const rosterContainer = document.getElementById('accepted-roster-list');
+            if (!pendingContainer || !rosterContainer) return;
+
+            pendingContainer.innerHTML = '';
+            rosterContainer.innerHTML = '';
+
             try {
                 if (!requests || typeof requests !== 'object') {
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+                    pendingContainer.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+                    rosterContainer.innerHTML = '<p class="text-slate-500 text-sm italic">No accepted pilots in roster.</p>';
                     return;
                 }
-                let count = 0;
+
+                let pendingCount = 0;
+                let rosterCount = 0;
+
                 Object.keys(requests).forEach(driverId => {
                     const req = requests[driverId];
-                    if (req && typeof req === 'object' && (req.status === 'PENDING' || !req.status)) {
-                        count++;
-                        const card = document.createElement('div');
-                        card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
-                        card.innerHTML = `
-                            <div>
-                                <p class="font-bold text-white text-sm">${req.name || driverId}</p>
-                                <p class="text-xs text-slate-400">ID: ${req.id || driverId}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Accept</button>
-                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Reject</button>
-                            </div>
-                        `;
-                        container.appendChild(card);
+                    if (req && typeof req === 'object') {
+                        const status = req.status || 'PENDING';
+                        const pilotName = req.name || driverId;
+                        const pilotId = req.id || driverId;
+
+                        if (status === 'PENDING') {
+                            pendingCount++;
+                            const card = document.createElement('div');
+                            card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
+                            card.innerHTML = `
+                                <div>
+                                    <p class="font-bold text-white text-sm">${pilotName}</p>
+                                    <p class="text-xs text-slate-400">ID: ${pilotId}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Accept</button>
+                                    <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Reject</button>
+                                </div>
+                            `;
+                            pendingContainer.appendChild(card);
+                        } else if (status === 'ACCEPTED') {
+                            rosterCount++;
+                            const isDriving = (window.currentDrivingPilotId === driverId || window.currentDrivingPilotId === pilotId);
+                            const card = document.createElement('div');
+                            card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
+                            card.innerHTML = `
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-bold text-white text-sm">${pilotName}</p>
+                                        ${isDriving ? '<span class="bg-emerald-500 text-slate-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full animate-pulse">🚗 DRIVING</span>' : ''}
+                                    </div>
+                                    <p class="text-xs text-slate-400">ID: ${pilotId}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="assignDriverToCar('${teamName}', '${driverId}', '${pilotName}')" class="bg-sky-600 hover:bg-sky-700 px-3 py-1 rounded text-xs font-bold text-white transition-colors">Drive / To Car</button>
+                                    <button onclick="removePilot('${teamName}', '${driverId}', '${pilotName}')" class="bg-red-600/80 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white transition-colors">Remove</button>
+                                </div>
+                            `;
+                            rosterContainer.appendChild(card);
+                        }
                     }
                 });
-                if (count === 0) {
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+
+                if (pendingCount === 0) {
+                    pendingContainer.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+                }
+                if (rosterCount === 0) {
+                    rosterContainer.innerHTML = '<p class="text-slate-500 text-sm italic">No accepted pilots in roster.</p>';
                 }
             } catch (err) {
-                console.error('Error rendering requests:', err);
-                container.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+                console.error('Error rendering requests and roster:', err);
+                pendingContainer.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+                rosterContainer.innerHTML = '<p class="text-slate-500 text-sm italic">No accepted pilots in roster.</p>';
             }
         }
+
+        window.assignDriverToCar = function(teamName, driverId, pilotName) {
+            if (!confirm(`Are you sure you want to assign ${pilotName} to drive?`)) return;
+
+            // 1. Update currentPilotId in Firebase session
+            db.ref(`rooms/${teamName}/session/currentPilotId`).set(driverId).then(() => {
+                // 2. Automatically send tactical instruction with green background
+                const instructionText = `DRIVER CHANGE: ${pilotName.toUpperCase()} TO DRIVE`;
+                return db.ref(`rooms/${teamName}/instructions`).set({
+                    text: instructionText,
+                    message: instructionText,
+                    bg: 'verde',
+                    timestamp: Date.now(),
+                    t: Date.now()
+                });
+            }).then(() => {
+                console.log(`Driver assigned successfully: ${pilotName}`);
+            }).catch(err => {
+                console.error('Error assigning driver to car:', err);
+            });
+        };
+
+        window.removePilot = function(teamName, driverId, pilotName) {
+            if (!confirm(`Are you sure you want to remove pilot ${pilotName} from the team?`)) return;
+            if (!confirm(`Double confirmation: Permanent removal of ${pilotName}. Proceed?`)) return;
+
+            // Remove from requests, pending, members, pilots
+            const updates = {};
+            updates[`rooms/${teamName}/requests/${driverId}`] = null;
+            updates[`rooms/${teamName}/pending/${driverId}`] = null;
+            updates[`rooms/${teamName}/members/${driverId}`] = null;
+            updates[`rooms/${teamName}/pilots/${driverId}`] = null;
+
+            db.ref().update(updates).then(() => {
+                console.log(`Pilot removed successfully: ${pilotName}`);
+            }).catch(err => {
+                console.error('Error removing pilot:', err);
+            });
+        };
 
         function formatMs(ms) {
             if (!ms || isNaN(ms) || ms <= 0) return '--:--.---';
@@ -510,8 +611,7 @@
                 }
             }, err => {
                 console.warn('Error reading circuits node:', err);
-                const container = document.getElementById('circuits-repository-list');
-                if (container) container.innerHTML = '<p class="text-slate-500 text-sm italic">No synchronized circuits found.</p>';
+                container.innerHTML = '<p class="text-slate-500 text-sm italic">No synchronized circuits found.</p>';
             });
         }
     </script>
