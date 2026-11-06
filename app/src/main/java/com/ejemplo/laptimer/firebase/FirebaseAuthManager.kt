@@ -31,12 +31,18 @@ object FirebaseAuthManager {
         } ?: return null
 
         return try {
-            val token = user.getIdToken(false).await().token
-            Log.d(TAG, "getIdToken() SUCCESS for UID: ${user.uid}")
+            val token = user.getIdToken(true).await().token
+            Log.d(TAG, "getIdToken(true) SUCCESS for UID: ${user.uid}")
             token
         } catch (e: Exception) {
-            Log.e(TAG, "getIdToken() FAILED: ${e.message}", e)
-            null
+            Log.e(TAG, "getIdToken() FAILED: ${e.message}, retrying...", e)
+            try {
+                ensureAuthenticated()
+                auth.currentUser?.getIdToken(true)?.await()?.token
+            } catch (ex: Exception) {
+                Log.e(TAG, "getIdToken() retry FAILED: ${ex.message}", ex)
+                null
+            }
         }
     }
 }

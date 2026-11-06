@@ -22,7 +22,9 @@ data class PilotUiState(
     val unexpectedMovement: Boolean = false,
     val estimatedStintMinutes: Int = 30,
     val tacticalInstruction: EnduranceSyncClient.TacticalInstruction? = null,
-    val ejected: Boolean = false
+    val ejected: Boolean = false,
+    val pilotName: String = "",
+    val pilotId: String = ""
 )
 
 class PilotSessionViewModel(application: Application) : AndroidViewModel(application) {
@@ -38,6 +40,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
 
     fun startSession(teamCode: String, myPilotId: String) {
         syncJob?.cancel()
+        _uiState.value = _uiState.value.copy(pilotId = myPilotId, pilotName = settings.driverName)
         syncJob = viewModelScope.launch {
             launch {
                 syncClient.observeSessionState(teamCode).collect { state ->

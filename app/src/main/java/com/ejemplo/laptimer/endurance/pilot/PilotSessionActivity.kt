@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -34,8 +35,9 @@ class PilotSessionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val teamCode = intent.getStringExtra("teamCode") ?: "EMPB-26"
-        val pilotId = intent.getStringExtra("pilotId") ?: "pilot-1"
+        val settings = NetSettings(this)
+        val teamCode = intent.getStringExtra("teamCode") ?: settings.ensureRoom()
+        val pilotId = intent.getStringExtra("pilotId") ?: settings.deviceUid.ifBlank { "pilot-1" }
 
         rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -58,7 +60,7 @@ class PilotSessionActivity : AppCompatActivity() {
         }
         navHeader.addView(back)
         val navTitle = TextView(this).apply {
-            text = "Driver Session"
+            text = "Driver Session Cockpit"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
@@ -95,11 +97,11 @@ class PilotSessionActivity : AppCompatActivity() {
         rootLayout.addView(instructionBanner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
 
         txtHeader = TextView(this).apply {
-            textSize = 22f
+            textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            text = "Team: $teamCode"
+            text = "Team: $teamCode · Driver: ${settings.driverName}"
         }
         rootLayout.addView(txtHeader)
 
@@ -141,21 +143,31 @@ class PilotSessionActivity : AppCompatActivity() {
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.parseColor("#EF4444"))
             setPadding(0, dp(14), 0, dp(14))
-            setOnClickListener { confirmExit() }
+            setOnClickListener { confirmExit(teamCode, pilotId) }
         }
         rootLayout.addView(btnExit, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
 
         setContentView(rootLayout)
         viewModel.startSession(teamCode, pilotId)
-        observeState()
+        observeState(teamCode, pilotId)
     }
 
-    private fun observeState() {
+    private fun observeState(teamCode: String, pilotId: String) {
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
+                if (state.ejected) {
+                    Toast.makeText(this@PilotSessionActivity, "You have been removed from the team by the Crew Chief.", Toast.LENGTH_LONG).show()
+                    finish()
+                    return@collectLatest
+                }
+
+                if (state.pilotName.isNotBlank()) {
+                    txtHeader.text = "Team: $teamCode · Driver: ${state.pilotName}"
+                }
+
                 if (state.isCurrentPilot) {
                     rootLayout.setBackgroundColor(Color.parseColor("#16A34A"))
-                    txtStatus.text = "ON TRACK · YOUR STINT"
+                    txtStatus.text = "ON TRACK · DRIVING (YOUR STINT)"
                 } else {
                     rootLayout.setBackgroundColor(Color.parseColor("#C2410C"))
                     txtStatus.text = "RESTING · Awaiting stint (~${state.estimatedStintMinutes} min)"
@@ -198,13 +210,14 @@ class PilotSessionActivity : AppCompatActivity() {
         }
     }
 
-    private fun confirmExit() {
+    private fun confirmExit(teamCode: String, pilotId: String) {
         AlertDialog.Builder(this)
             .setTitle("Finish Session")
             .setMessage("Are you sure you want to finish and exit this endurance session?")
             .setPositiveButton("Finish Session") { _, _ ->
-                NetSettings(this).clearEnduranceSession()
-                finish()
+                viewModel.leaveSession(teamCode, pilotId) {
+                    finish()
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
