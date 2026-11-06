@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,37 +14,37 @@
         <div class="flex items-center gap-4">
             <div id="connection-badge" class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 text-xs">
                 <span id="connection-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-                <span id="connection-status-text" class="text-xs text-slate-400 font-semibold">Conectando...</span>
+                <span id="connection-status-text" class="text-xs text-slate-400 font-semibold">Connecting...</span>
             </div>
             <div id="team-info-badge" class="text-sm text-slate-400 hidden">
-                Box Activo: <span id="lbl-team-name" class="font-bold text-white"></span>
+                Active Pit: <span id="lbl-team-name" class="font-bold text-white"></span>
             </div>
         </div>
     </header>
     <main class="flex-grow p-6 max-w-7xl mx-auto w-full">
         <section id="login-section" class="max-w-md mx-auto mt-20 bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl">
-            <h2 class="text-2xl font-bold mb-2 text-center text-white">Acceso Pit Wall</h2>
-            <p class="text-xs text-slate-400 mb-6 text-center">Introduce el identificador del equipo (6-15 caracteres) y tu PIN numérico.</p>
+            <h2 class="text-2xl font-bold mb-2 text-center text-white">Pit Wall Access</h2>
+            <p class="text-xs text-slate-400 mb-6 text-center">Enter team identifier (6-15 characters) and numeric access PIN.</p>
 
             <div id="login-error-msg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-2.5 rounded-lg text-xs font-semibold mb-4 text-center">
-                Error: Equipo no encontrado o PIN incorrecto.
+                Error: Team not found or incorrect PIN.
             </div>
 
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nombre del Equipo</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Team Name</label>
                     <input type="text" id="team-name-input" required minlength="6" maxlength="15"
                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
-                           placeholder="Ej. Torque Team">
+                           placeholder="e.g. Torque Team">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">PIN de Acceso</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Access PIN</label>
                     <input type="password" id="team-pin-input" required minlength="4" maxlength="6"
                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
                            placeholder="••••">
                 </div>
                 <button type="submit" class="w-full bg-red-600 hover:bg-red-700 font-bold py-3 rounded-lg transition-colors shadow-lg shadow-red-900/40">
-                    Conectar al Box
+                    Connect to Pit
                 </button>
             </form>
         </section>
@@ -52,29 +52,37 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
                     <h3 class="text-base font-bold mb-4 text-amber-400 flex items-center gap-2">
-                        <span>⏳ Solicitudes de Pilotos (Pendientes)</span>
+                        <span>⏳ Pilot Access Requests (Pending)</span>
                     </h3>
                     <div id="pending-pilots-list" class="space-y-3">
-                        <p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>
+                        <p class="text-slate-500 text-sm italic">No pending access requests.</p>
                     </div>
                 </div>
                 <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-between">
                     <div>
-                        <h3 class="text-base font-bold mb-4 text-emerald-400">📢 Enviar Instrucción a Pista</h3>
+                        <h3 class="text-base font-bold mb-4 text-emerald-400">📢 Send Track Instruction</h3>
                         <form id="instruction-form" class="space-y-3">
-                            <input type="text" id="instruction-input" placeholder="Ej. Entrar en esta vuelta / Ahorrar batería"
+                            <input type="text" id="instruction-input" placeholder="e.g. Enter this lap / Save battery"
                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
                             <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-colors">
-                                Transmitir al Piloto
+                                Transmit to Pilot
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                <h3 class="text-base font-bold mb-4 text-sky-400">🗺️ Repositorio de Circuitos Sincronizados</h3>
-                <div id="circuits-repository-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <p class="text-slate-500 text-sm italic">Cargando circuitos desde Firebase...</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                    <h3 class="text-base font-bold mb-4 text-cyan-400">🏎️ Live Telemetry Nodes (/rooms/{roomCode}/live)</h3>
+                    <div id="live-telemetry-list" class="space-y-3">
+                        <p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>
+                    </div>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                    <h3 class="text-base font-bold mb-4 text-sky-400">🗺️ Synchronized Circuits Repository</h3>
+                    <div id="circuits-repository-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <p class="text-slate-500 text-sm italic">Loading circuits from Firebase...</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -93,7 +101,7 @@
             if (dot && statusTxt) {
                 if (connected) {
                     dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
-                    statusTxt.innerText = 'En Línea';
+                    statusTxt.innerText = 'Online';
                     statusTxt.className = 'text-xs text-emerald-400 font-semibold';
                     if (activeTeamName) {
                         initPitListeners(activeTeamName);
@@ -101,7 +109,7 @@
                     }
                 } else {
                     dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
-                    statusTxt.innerText = 'Sin Conexión (Offline)';
+                    statusTxt.innerText = 'Offline';
                     statusTxt.className = 'text-xs text-red-400 font-semibold';
                 }
             }
@@ -110,7 +118,7 @@
         function showLoginError(msg) {
             const errDiv = document.getElementById('login-error-msg');
             if (errDiv) {
-                errDiv.innerText = msg || 'Error: Equipo no encontrado o PIN incorrecto.';
+                errDiv.innerText = msg || 'Error: Team not found or incorrect PIN.';
                 errDiv.classList.remove('hidden');
             }
         }
@@ -128,8 +136,13 @@
             const teamName = document.getElementById('team-name-input').value.trim().toUpperCase();
             const pin = document.getElementById('team-pin-input').value.trim();
 
-            db.ref('rooms/' + teamName + '/meta').once('value').then(snapshot => {
-                const meta = snapshot.val();
+            // Validate against /rooms/{roomCode}/meta and check /rooms/{roomCode}/live telemetry structure
+            Promise.all([
+                db.ref('rooms/' + teamName + '/meta').once('value'),
+                db.ref('rooms/' + teamName + '/live').once('value')
+            ]).then(([metaSnap, liveSnap]) => {
+                const meta = metaSnap.val();
+                const liveData = liveSnap.val();
                 if (meta) {
                     const pinValid = meta.pinHash ? true : (meta.pin === pin);
                     if (pinValid) {
@@ -155,14 +168,14 @@
                         initPitListeners(teamName);
                         loadCircuitsRepository();
                     } else {
-                        showLoginError('Error: Equipo no encontrado o PIN incorrecto.');
+                        showLoginError('Error: Team not found or incorrect PIN.');
                     }
                 }).catch(() => {
-                    showLoginError('Error: Equipo no encontrado o PIN incorrecto.');
+                    showLoginError('Error: Team not found or incorrect PIN.');
                 });
             }).catch(err => {
                 console.error(err);
-                showLoginError('Error de red al conectar con Firebase. Revisa tu conexión.');
+                showLoginError('Network error connecting to Firebase. Check your connection.');
             });
         });
 
@@ -178,6 +191,11 @@
             }, err => {
                 console.warn('Error reading pending:', err);
             });
+            db.ref(`rooms/${teamName}/live`).on('value', snapshot => {
+                renderLiveTelemetry(snapshot.val());
+            }, err => {
+                console.warn('Error reading live telemetry:', err);
+            });
         }
 
         function renderPendingRequests(teamName, requests) {
@@ -186,7 +204,7 @@
             container.innerHTML = '';
             try {
                 if (!requests || typeof requests !== 'object') {
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
                     return;
                 }
                 let count = 0;
@@ -202,19 +220,54 @@
                                 <p class="text-xs text-slate-400">ID: ${req.id || driverId}</p>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Aceptar</button>
-                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Rechazar</button>
+                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Accept</button>
+                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Reject</button>
                             </div>
                         `;
                         container.appendChild(card);
                     }
                 });
                 if (count === 0) {
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
                 }
             } catch (err) {
                 console.error('Error rendering requests:', err);
-                container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+                container.innerHTML = '<p class="text-slate-500 text-sm italic">No pending access requests.</p>';
+            }
+        }
+
+        function renderLiveTelemetry(liveData) {
+            const container = document.getElementById('live-telemetry-list');
+            if (!container) return;
+            container.innerHTML = '';
+            try {
+                if (!liveData || typeof liveData !== 'object') {
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>';
+                    return;
+                }
+                let count = 0;
+                Object.keys(liveData).forEach(deviceUid => {
+                    const telemetry = liveData[deviceUid];
+                    if (telemetry && typeof telemetry === 'object') {
+                        count++;
+                        const card = document.createElement('div');
+                        card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
+                        card.innerHTML = `
+                            <div>
+                                <p class="font-bold text-white text-sm">Car / Device: ${deviceUid}</p>
+                                <p class="text-xs text-slate-400">Speed: ${telemetry.speed || 0} km/h · Lap: ${telemetry.lap || 0} · Battery: ${telemetry.bat || '--'}%</p>
+                            </div>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" title="Telemetry Active"></span>
+                        `;
+                        container.appendChild(card);
+                    }
+                });
+                if (count === 0) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>';
+                }
+            } catch (err) {
+                console.error('Error rendering live telemetry:', err);
+                container.innerHTML = '<p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>';
             }
         }
 
@@ -256,7 +309,7 @@
                 try {
                     const circuits = snapshot.val();
                     if (!circuits || typeof circuits !== 'object') {
-                        container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                        container.innerHTML = '<p class="text-slate-500 text-sm italic">No synchronized circuits found.</p>';
                         return;
                     }
                     let count = 0;
@@ -268,22 +321,22 @@
                             card.className = 'bg-slate-900 p-4 rounded-lg border border-slate-700';
                             card.innerHTML = `
                                 <h4 class="font-bold text-white text-sm mb-1">${circuit.name || circuitId}</h4>
-                                <p class="text-xs text-slate-400">Sectores: ${circuit.sectorCount || 'N/D'}</p>
+                                <p class="text-xs text-slate-400">Sectors: ${circuit.sectorCount || 'N/A'}</p>
                             `;
                             container.appendChild(card);
                         }
                     });
                     if (count === 0) {
-                        container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                        container.innerHTML = '<p class="text-slate-500 text-sm italic">No synchronized circuits found.</p>';
                     }
                 } catch (err) {
                     console.error('Error loading circuits repository:', err);
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No synchronized circuits found.</p>';
                 }
             }, err => {
                 console.warn('Error reading circuits node:', err);
                 const container = document.getElementById('circuits-repository-list');
-                if (container) container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                if (container) container.innerHTML = '<p class="text-slate-500 text-sm italic">No synchronized circuits found.</p>';
             });
         }
     </script>

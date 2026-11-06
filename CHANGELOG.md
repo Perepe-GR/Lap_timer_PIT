@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Complete hybrid architecture integration: Android Native (Kotlin), Firebase Realtime Database, and Pit Wall Web Dashboard (`pit-panel/index.html`).
+- Refactored Battery Monitoring & Time-to-Empty (`BatteryEstimator.kt`, `StatusBarsRenderer.kt`, `MainPermissionsHandler.kt`):
+  - Dynamic discharge rate calculation (% per minute and mA instantaneous draw via `BatteryManager`).
+  - Time-to-Empty display beside the battery icon: `"4h 20m remaining"` or `"--"` when plugged in / charging.
+  - Charging-state suppression: completely suppresses battery warning/critical alerts if the device is connected to external power.
+  - Strict Monospace typography and 100% English wording across status bar and alert strip.
 - Refactored Settings screen (`SessionSettingsActivity` and `PitSettingsActivity`) and introduced `SettingsViewModel`:
   - Replaced legacy 10-character random codes with validated Team/Session Name (6-15 chars, alphanumeric with spaces) and numeric Access PIN (4-6 digits).
   - Pre-save validation via `ValidationUtils` with field-level inline error cues.

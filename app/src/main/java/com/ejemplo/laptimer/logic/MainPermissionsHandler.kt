@@ -3,6 +3,7 @@ package com.ejemplo.laptimer.logic
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.BatteryManager
 import android.os.SystemClock
 import android.view.View
@@ -57,7 +58,8 @@ fun MainActivity.handleSentence(line: String) {
 fun MainActivity.isCharging(): Boolean {
     val i = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     val st = i?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-    return st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL
+    val plugged = i?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+    return st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
 }
 
 fun MainActivity.batteryLevel(): Int {
@@ -93,22 +95,22 @@ fun MainActivity.computeAlert(): Pair<String, Boolean>? {
         return Pair("STINT: LAP LIMIT EXCEEDED", true)
     }
     if (now < pitFailUntil) return Pair(pitFailText, true)
+
     val batInfo = BatteryEstimator.update(this)
-    val tteStr = if (!batInfo.isCharging && batInfo.remainingMinutes > 0) {
-        val h = batInfo.remainingMinutes / 60
-        val m = batInfo.remainingMinutes % 60
-        if (h > 0) " (~${h}h ${m}m left)" else " (~${m}m left)"
-    } else {
-        ""
+    // Never show battery alerts if charging / connected to power
+    if (!batInfo.isCharging) {
+        val remStr = if (batInfo.remainingMinutes > 0) " (${BatteryEstimator.formatRemainingTime(batInfo)})" else ""
+        if (batInfo.remainingMinutes in 1..20) {
+            return Pair("CRITICAL BATTERY: ${batInfo.percentage}%$remStr", true)
+        }
+        if (batInfo.remainingMinutes in 21..35) {
+            return Pair("LOW BATTERY: ${batInfo.percentage}%$remStr", false)
+        }
+        if (batInfo.percentage <= settings.batCrit) {
+            return Pair("CRITICAL BATTERY: ${batInfo.percentage}%$remStr", true)
+        }
     }
 
-    if (!batInfo.isCharging && batInfo.remainingMinutes in 1..20) {
-        return Pair("CRITICAL BATTERY: ${batInfo.percentage}%$tteStr (Under 20m left!)", true)
-    }
-    if (!batInfo.isCharging && batInfo.remainingMinutes in 21..35) {
-        return Pair("LOW BATTERY: ${batInfo.percentage}%$tteStr (Under 35m left)", false)
-    }
-    if (!batInfo.isCharging && batInfo.percentage <= settings.batCrit) return Pair("CRITICAL BATTERY ${batInfo.percentage}%", true)
     if (endurance && s.maxMin > 0 && started && el >= (s.maxMin - 5) * 60_000L) {
         val left = ((s.maxMin * 60_000L) - el + 59_999L) / 60_000L
         return Pair("STINT: $left MIN REMAINING FOR MAX", false)
@@ -116,7 +118,11 @@ fun MainActivity.computeAlert(): Pair<String, Boolean>? {
     if (endurance && s.plan > 0 && s.lapsDone >= s.plan) {
         return Pair("STINT: PLANNED LAPS COMPLETED", false)
     }
-    if (!batInfo.isCharging && batInfo.percentage <= settings.batWarn) return Pair("LOW BATTERY ${batInfo.percentage}%", false)
+
+    if (!batInfo.isCharging && batInfo.percentage <= settings.batWarn) {
+        val remStr = if (batInfo.remainingMinutes > 0) " (${BatteryEstimator.formatRemainingTime(batInfo)})" else ""
+        return Pair("LOW BATTERY: ${batInfo.percentage}%$remStr", false)
+    }
     return null
 }
 
@@ -127,6 +133,7 @@ fun MainActivity.updateAlerts() {
         bindings.alertStrip.visibility = View.GONE
         return
     }
+    bindings.alertStrip.typeface = Typeface.MONOSPACE
     bindings.alertStrip.text = a.first
     bindings.alertStrip.setBackgroundColor(if (a.second) Color.parseColor("#EF4444") else Color.parseColor("#F5A524"))
     bindings.alertStrip.setTextColor(if (a.second) Color.WHITE else Color.parseColor("#141413"))

@@ -37,7 +37,7 @@ if (isBuilding) {
     versionPropertiesFile.outputStream().use { versionProps.store(it, "Auto-incremented build number") }
 }
 
-val computedVersionName = "2.3.0"
+val computedVersionName = "$major.$minor.$buildNum"
 
 android {
     namespace = "com.ejemplo.laptimer"

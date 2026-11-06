@@ -283,3 +283,131 @@
 
 # 2026-11-05 23:59:44.916188
 +add *md in the context
+
+# 2026-11-06 01:55:46.751448
++Actualiza y genera la documentación técnica completa del proyecto LapTimer (tanto en archivos Markdown como en el archivo `README.md` principal del repositorio) para que refleje con total precisión el estado actual, la arquitectura y los flujos implementados:
++
++1. Arquitectura General y Módulos:
++   - Detalla la estructura del ecosistema: App Android nativa (Kotlin) para telemetría y modo Endurance/Solo, backend en Firebase Realtime Database, y panel web de Pit (`index.html`) para el Crew Chief.
++
++2. Sistema de Autenticación y Seguridad:
++   - Documenta el sistema de acceso basado en nombres de equipo (validados mediante Regex estricta de 6 a 15 caracteres alfanuméricos y espacios) y PINs numéricos de 4 a 6 dígitos con hash seguro (`pinHash` y `salt`).
++   - Especifica las reglas de seguridad de Firebase implementadas para proteger las rutas de equipos (`/teams`), salas y solicitudes (`/rooms/{teamName}/requests`), destacando el uso de `deviceUid` como clave única para evitar duplicidades y condiciones de carrera.
++
++3. Resiliencia y Manejo Offline:
++   - Explica la configuración de persistencia offline de Firebase (`setPersistenceEnabled(true)`) y la sincronización local en circuitos con zonas sombra de cobertura.
++
++4. Panel Web de Pit (`index.html`):
++   - Describe el funcionamiento del dashboard responsivo (Tailwind CSS), la autenticación del jefe de equipo, el listener en tiempo real de solicitudes de pilotos con acciones de Aceptar/Rechazar, el envío de instrucciones tácticas y el repositorio global de circuitos sincronizados.
++Actualiza la versión de la aplicación LapTimer a la **2.3.0** en todo el proyecto y en su documentación técnica asociada:
++
++1. Actualización de Versión en Android (`build.gradle` o archivo de configuración):
++   - Actualiza el `versionCode` y el `versionName` a `2.3.0` (o equivalente semántico) en el módulo de la aplicación Android.
++
++2. Actualización de la Documentación Técnica (`README.md` / Archivos Markdown):
++   - Refleja el número de versión `v2.3.0` en la cabecera del proyecto y en la sección de especificaciones técnicas.
++   - Asegúrate de que la documentación recoja el estado actual completo: arquitectura híbrida Android/Web, persistencia offline, seguridad por hash con salt, control de solicitudes mediante `deviceUid` por dispositivo, y panel web de Pit (`index.html`) con Tailwind CSS y Firebase Realtime Database.
+
+# 2026-11-06 01:55:53.481393
++Y
+
+# 2026-11-06 01:58:03.043162
++y
+
+# 2026-11-06 01:59:07.743409
++add app\build.gradle
+
+# 2026-11-06 02:00:06.281342
++y
+
+# 2026-11-06 02:00:29.843830
++/run git add app/build.gradle app/version.properties
+
+# 2026-11-06 02:00:29.844834
++/run git add app/build.gradle app/version.properties
+
+# 2026-11-06 02:00:30.145165
++/run git commit -m "Actualización a versión 2.3.0"
+
+# 2026-11-06 02:00:30.146180
++/run git commit -m "Actualización a versión 2.3.0"
+
+# 2026-11-06 02:00:39.071321
++y
+
+# 2026-11-06 02:00:53.732561
++add app\build.gradle.kts
+
+# 2026-11-06 02:00:56.961725
++y
+
+# 2026-11-06 02:04:04.839864
++add/app/build.gradle.kts
++add/app/version.properties
+
+# 2026-11-06 02:06:41.809520
++y
+
+# 2026-11-06 02:06:41.815464
++/run git add app/build.gradle.kts app/version.properties
+
+# 2026-11-06 02:06:41.815464
++/run git add app/build.gradle.kts app/version.properties
+
+# 2026-11-06 02:06:42.108559
++/run git commit -m "Actualización a versión 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:06:42.109576
++/run git commit -m "Actualización a versión 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:06:53.986137
++y
+
+# 2026-11-06 02:08:23.994943
++git add app/build.gradle.kts app/version.properties
++git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:08:38.655011
++y
+
+# 2026-11-06 02:08:38.661011
++/run git add app/build.gradle.kts app/version.properties
+
+# 2026-11-06 02:08:38.661011
++/run git add app/build.gradle.kts app/version.properties
+
+# 2026-11-06 02:08:38.926175
++/run git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:08:38.927163
++/run git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:09:24.329887
++y
+
+# 2026-11-06 02:09:28.625490
++/run git add "app/build.gradle.kts" "app/version.properties"
+
+# 2026-11-06 02:09:28.627110
++/run git add "app/build.gradle.kts" "app/version.properties"
+
+# 2026-11-06 02:09:28.907773
++/run git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:09:28.908772
++/run git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:09:33.615968
++git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:09:53.446426
++Y
+
+# 2026-11-06 02:09:53.452999
++/run git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:09:53.452999
++/run git commit -m "Actualizacion a version 2.3.0 en build.gradle.kts y version.properties"
+
+# 2026-11-06 02:10:39.528491
++n

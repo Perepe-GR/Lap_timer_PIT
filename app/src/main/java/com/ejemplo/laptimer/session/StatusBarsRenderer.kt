@@ -1,6 +1,7 @@
 package com.ejemplo.laptimer.session
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.view.View
 import com.ejemplo.laptimer.*
 import com.ejemplo.laptimer.firebase.NetStatus
@@ -9,22 +10,14 @@ import java.util.Locale
 
 fun MainActivity.renderGps() {
     val batInfo = BatteryEstimator.update(this)
-    val batText = if (batInfo.isCharging) {
-        "⚡ ${batInfo.percentage}%"
-    } else if (batInfo.remainingMinutes > 0) {
-        val h = batInfo.remainingMinutes / 60
-        val m = batInfo.remainingMinutes % 60
-        val timeStr = if (h > 0) "${h}h ${m}m" else "${m}m"
-        "🔋 ${batInfo.percentage}% (${timeStr})"
-    } else {
-        "🔋 ${batInfo.percentage}%"
-    }
+    val batText = BatteryEstimator.formatRemainingTime(batInfo)
 
     val gpsStr = when {
         demoActive -> String.format(Locale.US, "DEMO ×%d · Simulated GPS %.0f Hz", demoFactor, hz)
         !hasFix -> "No GPS signal"
         else -> String.format(Locale.US, "GPS %.0f Hz · %d sat · HDOP %.1f", hz, sats, hdop)
     }
+    bindings.txtGps.typeface = Typeface.MONOSPACE
     bindings.txtGps.text = "$gpsStr  ·  $batText"
 }
 
