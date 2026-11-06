@@ -1,6 +1,12 @@
 package com.ejemplo.laptimer.endurance.sync
 
 import android.content.Context
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.json.JSONObject
@@ -61,6 +67,28 @@ class EnduranceRepository(
         }
     }
 
+    fun scheduleConnectedSync(code: String, pilotId: String) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val data = Data.Builder()
+            .putString("teamCode", code)
+            .putString("pilotId", pilotId)
+            .build()
+
+        val request = OneTimeWorkRequestBuilder<TelemetrySyncWorker>()
+            .setConstraints(constraints)
+            .setInputData(data)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "telemetry_sync_$code",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
     fun observeOnline(): Flow<Boolean> = flow {
         while (true) {
             emit(true)
@@ -70,5 +98,6 @@ class EnduranceRepository(
 
     suspend fun startSync(code: String, pilotId: String) {
         flushQueue(code, pilotId)
+        scheduleConnectedSync(code, pilotId)
     }
 }

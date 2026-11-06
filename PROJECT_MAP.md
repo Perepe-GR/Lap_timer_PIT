@@ -74,6 +74,7 @@ The project follows a modular, single-responsibility architecture across clean s
 - **Sync & Data (`endurance/sync/`)**:
   - `EnduranceModels.kt` & `EnduranceModelMappers.kt` - TeamMeta (with pinHash, salt, leaderUid), MemberInfo, StrategyBase, SessionState, PilotInfo, LapRecord, Stint.
   - `EnduranceSyncClient.kt` & `EnduranceRepository.kt` - REST client with `withContext(Dispatchers.IO)` and anonymous auth token injection (`?auth=<idToken>`).
+  - `TelemetrySyncWorker.kt` - Background WorkManager worker for automatic offline telemetry queue syncing upon network reconnection.
 
 
 ### Editor (`editor/`)
