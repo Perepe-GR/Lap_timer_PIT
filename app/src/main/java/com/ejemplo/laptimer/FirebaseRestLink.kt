@@ -25,6 +25,7 @@ class FirebaseRestLink(
     private val pendingLaps = ConcurrentLinkedQueue<String>()
     private var lastKey: String? = null
     private var lastCmdId: String? = null
+    private var lastInstTime = 0L
     private var first = true
     private var purged = false
 
@@ -52,6 +53,7 @@ class FirebaseRestLink(
         purged = false
         lastKey = null
         lastCmdId = null
+        lastInstTime = 0L
         val e = Executors.newSingleThreadScheduledExecutor()
         exec = e
         val period = settings.intervalS.toLong().coerceAtLeast(10L)
@@ -144,7 +146,8 @@ class FirebaseRestLink(
                 val bg = obj.optString("bg", "amarillo")
                 val flag = obj.optString("flag", "")
                 val t = obj.optLong("t", obj.optLong("timestamp", System.currentTimeMillis()))
-                if (text.isNotBlank()) {
+                if (text.isNotBlank() && (lastInstTime == 0L || t > lastInstTime)) {
+                    lastInstTime = t
                     onMessages(listOf(PitMessage("inst-$t", text, bg, flag)))
                 }
             }
