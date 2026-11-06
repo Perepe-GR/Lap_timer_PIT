@@ -11,14 +11,25 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
     <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
         <h1 class="text-xl font-extrabold tracking-wider text-red-500">LAPTIMER <span class="text-slate-300 text-sm font-normal">| Pit Wall Dashboard</span></h1>
-        <div id="team-info-badge" class="text-sm text-slate-400 hidden">
-            Box Activo: <span id="lbl-team-name" class="font-bold text-white"></span>
+        <div class="flex items-center gap-4">
+            <div id="connection-badge" class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 text-xs">
+                <span id="connection-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                <span id="connection-status-text" class="text-xs text-slate-400 font-semibold">Conectando...</span>
+            </div>
+            <div id="team-info-badge" class="text-sm text-slate-400 hidden">
+                Box Activo: <span id="lbl-team-name" class="font-bold text-white"></span>
+            </div>
         </div>
     </header>
     <main class="flex-grow p-6 max-w-7xl mx-auto w-full">
         <section id="login-section" class="max-w-md mx-auto mt-20 bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl">
             <h2 class="text-2xl font-bold mb-2 text-center text-white">Acceso Pit Wall</h2>
             <p class="text-xs text-slate-400 mb-6 text-center">Introduce el identificador del equipo (6-15 caracteres) y tu PIN numérico.</p>
+
+            <div id="login-error-msg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-2.5 rounded-lg text-xs font-semibold mb-4 text-center">
+                Error: Equipo no encontrado o PIN incorrecto.
+            </div>
+
             <form id="login-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nombre del Equipo</label>
@@ -74,15 +85,48 @@
         const db = firebase.database();
         let activeTeamName = null;
 
+        // Firebase Connection State Listener
+        db.ref('.info/connected').on('value', snap => {
+            const connected = snap.val() === true;
+            const dot = document.getElementById('connection-dot');
+            const statusTxt = document.getElementById('connection-status-text');
+            if (dot && statusTxt) {
+                if (connected) {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+                    statusTxt.innerText = 'En Línea';
+                    statusTxt.className = 'text-xs text-emerald-400 font-semibold';
+                } else {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+                    statusTxt.innerText = 'Sin Conexión (Offline)';
+                    statusTxt.className = 'text-xs text-red-400 font-semibold';
+                }
+            }
+        });
+
+        function showLoginError(msg) {
+            const errDiv = document.getElementById('login-error-msg');
+            if (errDiv) {
+                errDiv.innerText = msg || 'Error: Equipo no encontrado o PIN incorrecto.';
+                errDiv.classList.remove('hidden');
+            }
+        }
+
+        function hideLoginError() {
+            const errDiv = document.getElementById('login-error-msg');
+            if (errDiv) {
+                errDiv.classList.add('hidden');
+            }
+        }
+
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
+            hideLoginError();
             const teamName = document.getElementById('team-name-input').value.trim().toUpperCase();
             const pin = document.getElementById('team-pin-input').value.trim();
 
             db.ref('rooms/' + teamName + '/meta').once('value').then(snapshot => {
                 const meta = snapshot.val();
                 if (meta) {
-                    // Validate pin against pinHash or fallback pin
                     const pinValid = meta.pinHash ? true : (meta.pin === pin);
                     if (pinValid) {
                         activeTeamName = teamName;
@@ -107,21 +151,28 @@
                         initPitListeners(teamName);
                         loadCircuitsRepository();
                     } else {
-                        alert('Error: Equipo no encontrado o PIN incorrecto.');
+                        showLoginError('Error: Equipo no encontrado o PIN incorrecto.');
                     }
+                }).catch(() => {
+                    showLoginError('Error: Equipo no encontrado o PIN incorrecto.');
                 });
             }).catch(err => {
                 console.error(err);
-                alert('Error al conectar con la base de datos.');
+                showLoginError('Error de red al conectar con Firebase. Revisa tu conexión.');
             });
         });
 
         function initPitListeners(teamName) {
             db.ref(`rooms/${teamName}/requests`).on('value', snapshot => {
                 renderPendingRequests(teamName, snapshot.val());
+            }, err => {
+                console.warn('Error reading requests:', err);
+                renderPendingRequests(teamName, null);
             });
             db.ref(`rooms/${teamName}/pending`).on('value', snapshot => {
                 renderPendingRequests(teamName, snapshot.val());
+            }, err => {
+                console.warn('Error reading pending:', err);
             });
         }
 
@@ -129,41 +180,50 @@
             const container = document.getElementById('pending-pilots-list');
             if (!container) return;
             container.innerHTML = '';
-            if (!requests) {
-                container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
-                return;
-            }
-            let count = 0;
-            Object.keys(requests).forEach(driverId => {
-                const req = requests[driverId];
-                if (req && (req.status === 'PENDING' || !req.status)) {
-                    count++;
-                    const card = document.createElement('div');
-                    card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
-                    card.innerHTML = `
-                        <div>
-                            <p class="font-bold text-white text-sm">${req.name || driverId}</p>
-                            <p class="text-xs text-slate-400">ID: ${req.id || driverId}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Aceptar</button>
-                            <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Rechazar</button>
-                        </div>
-                    `;
-                    container.appendChild(card);
+            try {
+                if (!requests || typeof requests !== 'object') {
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+                    return;
                 }
-            });
-            if (count === 0) {
+                let count = 0;
+                Object.keys(requests).forEach(driverId => {
+                    const req = requests[driverId];
+                    if (req && typeof req === 'object' && (req.status === 'PENDING' || !req.status)) {
+                        count++;
+                        const card = document.createElement('div');
+                        card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
+                        card.innerHTML = `
+                            <div>
+                                <p class="font-bold text-white text-sm">${req.name || driverId}</p>
+                                <p class="text-xs text-slate-400">ID: ${req.id || driverId}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Aceptar</button>
+                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Rechazar</button>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    }
+                });
+                if (count === 0) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+                }
+            } catch (err) {
+                console.error('Error rendering requests:', err);
                 container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
             }
         }
 
         window.updatePilotStatus = function(teamName, driverId, status) {
-            const updateObj = { status: status };
-            db.ref(`rooms/${teamName}/requests/${driverId}`).update(updateObj);
-            db.ref(`rooms/${teamName}/pending/${driverId}`).update(updateObj);
-            if (status === 'ACCEPTED') {
-                db.ref(`rooms/${teamName}/pilots/${driverId}/info`).update({ status: 'READY', lastSeenTs: Date.now() });
+            try {
+                const updateObj = { status: status };
+                db.ref(`rooms/${teamName}/requests/${driverId}`).update(updateObj);
+                db.ref(`rooms/${teamName}/pending/${driverId}`).update(updateObj);
+                if (status === 'ACCEPTED') {
+                    db.ref(`rooms/${teamName}/pilots/${driverId}/info`).update({ status: 'READY', lastSeenTs: Date.now() });
+                }
+            } catch (err) {
+                console.error('Error updating pilot status:', err);
             }
         };
 
@@ -179,7 +239,8 @@
                 t: Date.now()
             }).then(() => {
                 document.getElementById('instruction-input').value = '';
-                alert('Instrucción transmitida a pista correctamente.');
+            }).catch(err => {
+                console.error('Error transmitting instruction:', err);
             });
         });
 
@@ -188,21 +249,37 @@
                 const container = document.getElementById('circuits-repository-list');
                 if (!container) return;
                 container.innerHTML = '';
-                const circuits = snapshot.val();
-                if (!circuits) {
+                try {
+                    const circuits = snapshot.val();
+                    if (!circuits || typeof circuits !== 'object') {
+                        container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                        return;
+                    }
+                    let count = 0;
+                    Object.keys(circuits).forEach(circuitId => {
+                        const circuit = circuits[circuitId];
+                        if (circuit && typeof circuit === 'object') {
+                            count++;
+                            const card = document.createElement('div');
+                            card.className = 'bg-slate-900 p-4 rounded-lg border border-slate-700';
+                            card.innerHTML = `
+                                <h4 class="font-bold text-white text-sm mb-1">${circuit.name || circuitId}</h4>
+                                <p class="text-xs text-slate-400">Sectores: ${circuit.sectorCount || 'N/D'}</p>
+                            `;
+                            container.appendChild(card);
+                        }
+                    });
+                    if (count === 0) {
+                        container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                    }
+                } catch (err) {
+                    console.error('Error loading circuits repository:', err);
                     container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
-                    return;
                 }
-                Object.keys(circuits).forEach(circuitId => {
-                    const circuit = circuits[circuitId];
-                    const card = document.createElement('div');
-                    card.className = 'bg-slate-900 p-4 rounded-lg border border-slate-700';
-                    card.innerHTML = `
-                        <h4 class="font-bold text-white text-sm mb-1">${circuit.name || circuitId}</h4>
-                        <p class="text-xs text-slate-400">Sectores: ${circuit.sectorCount || 'N/D'}</p>
-                    `;
-                    container.appendChild(card);
-                });
+            }, err => {
+                console.warn('Error reading circuits node:', err);
+                const container = document.getElementById('circuits-repository-list');
+                if (container) container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
             });
         }
     </script>
