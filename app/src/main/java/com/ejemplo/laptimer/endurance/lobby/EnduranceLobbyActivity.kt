@@ -14,7 +14,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ejemplo.laptimer.NetSettings
-import com.ejemplo.laptimer.endurance.leader.LeaderDashboardActivity
 import com.ejemplo.laptimer.endurance.pilot.PilotSessionActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -32,11 +31,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
 
         val settings = NetSettings(this)
         if (settings.sessionActive && settings.activeRoomCode.isNotBlank()) {
-            val intent = if (settings.userRole == "CREW_CHIEF") {
-                Intent(this, LeaderDashboardActivity::class.java)
-            } else {
-                Intent(this, PilotSessionActivity::class.java)
-            }
+            val intent = Intent(this, PilotSessionActivity::class.java)
             intent.putExtra("teamCode", settings.activeRoomCode)
             startActivity(intent)
             finish()
@@ -59,18 +54,11 @@ class EnduranceLobbyActivity : AppCompatActivity() {
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#C6F432"))
             setPadding(0, dp(6), dp(16), dp(6))
-            setOnClickListener {
-                val step = viewModel.uiState.value.step
-                if (step == LobbyUiState.STEP_SETUP) {
-                    viewModel.goBackToRoleSelect()
-                } else {
-                    finish()
-                }
-            }
+            setOnClickListener { finish() }
         }
         header.addView(back)
         val title = TextView(this).apply {
-            text = "Endurance Lobby"
+            text = "Endurance Pilot Join"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
@@ -87,12 +75,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val step = viewModel.uiState.value.step
-                if (step == LobbyUiState.STEP_SETUP) {
-                    viewModel.goBackToRoleSelect()
-                } else {
-                    finish()
-                }
+                finish()
             }
         })
 
@@ -108,22 +91,14 @@ class EnduranceLobbyActivity : AppCompatActivity() {
 
                 if (state.step != currentStep) {
                     currentStep = state.step
-                    val fragment = when (state.step) {
-                        LobbyUiState.STEP_ROLE_SELECT -> RoleSelectFragment()
-                        LobbyUiState.STEP_SETUP -> if (state.mode == "CREATE") CreateTeamFragment() else JoinTeamFragment()
-                        else -> WaitingRoomFragment()
-                    }
+                    val fragment = if (state.step == LobbyUiState.STEP_SETUP) JoinTeamFragment() else WaitingRoomFragment()
                     supportFragmentManager.beginTransaction()
                         .replace(container.id, fragment)
                         .commit()
                 }
 
-                state.navigateToSession?.let { targetRole ->
-                    val intent = if (targetRole == "LEADER" || targetRole == "CREW_CHIEF") {
-                        Intent(this@EnduranceLobbyActivity, LeaderDashboardActivity::class.java)
-                    } else {
-                        Intent(this@EnduranceLobbyActivity, PilotSessionActivity::class.java)
-                    }
+                state.navigateToSession?.let {
+                    val intent = Intent(this@EnduranceLobbyActivity, PilotSessionActivity::class.java)
                     intent.putExtra("teamCode", state.teamCode)
                     startActivity(intent)
                     finish()

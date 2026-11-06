@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class LobbyUiState(
-    val step: Int = STEP_ROLE_SELECT,
+    val step: Int = STEP_SETUP,
     val role: String = "PILOT",
     val mode: String = "JOIN",
     val teamCode: String = "",
@@ -30,7 +30,6 @@ data class LobbyUiState(
     val navigateToSession: String? = null
 ) {
     companion object {
-        const val STEP_ROLE_SELECT = 0
         const val STEP_SETUP = 1
         const val STEP_WAITING = 2
     }
@@ -46,59 +45,16 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
 
     init {
         val activeRoom = settings.activeRoomCode
-        val activeRole = settings.userRole
         val isSessionActive = settings.sessionActive
         if (isSessionActive && activeRoom.isNotBlank()) {
-            Log.i("EnduranceLobbyVM", "Restoring active session for room: $activeRoom, role: $activeRole")
+            Log.i("EnduranceLobbyVM", "Restoring active pilot session for room: $activeRoom")
             _uiState.value = _uiState.value.copy(
                 teamCode = activeRoom,
-                role = activeRole.ifBlank { "PILOT" },
+                role = "PILOT",
                 step = LobbyUiState.STEP_WAITING,
                 myPilotId = settings.deviceUid
             )
             startObserving(activeRoom)
-        }
-    }
-
-    fun selectRole(role: String) {
-        val normalizedRole = if (role == "LEADER" || role == "CREW_CHIEF") "CREW_CHIEF" else "PILOT"
-        val mode = if (normalizedRole == "CREW_CHIEF") "CREATE" else "JOIN"
-        _uiState.value = _uiState.value.copy(role = normalizedRole, mode = mode, step = LobbyUiState.STEP_SETUP, error = null)
-    }
-
-    fun goBackToRoleSelect() {
-        _uiState.value = _uiState.value.copy(step = LobbyUiState.STEP_ROLE_SELECT, error = null)
-    }
-
-    fun createTeam(teamName: String, pin: String, circuitId: String, leaderUid: String) {
-        viewModelScope.launch {
-            val cleanCode = teamName.trim().uppercase()
-            val currentUid = try {
-                FirebaseAuthManager.ensureAuthenticated()
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(pin = "", error = "Authentication error: ${e.message}")
-                return@launch
-            }
-
-            val metaRes = syncClient.fetchTeamMeta(cleanCode)
-            val existingMeta = metaRes.getOrNull()
-            if (existingMeta != null && existingMeta.leaderUid.isNotBlank() && existingMeta.leaderUid != currentUid) {
-                _uiState.value = _uiState.value.copy(pin = "", error = "Only one Crew Chief allowed per room.")
-                return@launch
-            }
-
-            val res = syncClient.createTeam(cleanCode, teamName, circuitId, currentUid, pin)
-            if (res.isSuccess) {
-                settings.saveEnduranceSession(cleanCode, "CREW_CHIEF", currentUid)
-                _uiState.value = _uiState.value.copy(
-                    teamCode = cleanCode, teamName = teamName, circuitId = circuitId, pin = pin,
-                    step = LobbyUiState.STEP_WAITING, error = null, myPilotId = currentUid
-                )
-                startObserving(cleanCode)
-            } else {
-                val err = res.exceptionOrNull()
-                _uiState.value = _uiState.value.copy(pin = "", error = "Connection error or timeout: ${err?.message}")
-            }
         }
     }
 
@@ -136,28 +92,6 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun acceptPilot(code: String, pilotId: String, pilotName: String, uid: String) {
-        viewModelScope.launch {
-            runCatching { syncClient.acceptPilot(code, pilotId, pilotName, uid) }
-                .onFailure { e -> _uiState.value = _uiState.value.copy(error = "Error accepting pilot: ${e.message}") }
-        }
-    }
-
-    fun rejectPilot(code: String, uid: String) {
-        viewModelScope.launch {
-            runCatching { syncClient.rejectPilot(code, uid) }
-                .onFailure { e -> _uiState.value = _uiState.value.copy(error = "Error rejecting pilot: ${e.message}") }
-        }
-    }
-
-    fun startSession() {
-        val code = _uiState.value.teamCode
-        viewModelScope.launch {
-            runCatching { syncClient.setSessionState(code, "RACING") }
-                .onFailure { e -> _uiState.value = _uiState.value.copy(error = "Error starting session: ${e.message}") }
-        }
-    }
-
     fun leaveRoom() {
         settings.clearEnduranceSession()
         _uiState.value = LobbyUiState()
@@ -178,19 +112,18 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
             syncClient.observePendingPilots(code).collect { pending ->
                 _uiState.value = _uiState.value.copy(pendingPilots = pending)
                 val myId = _uiState.value.myPilotId
-                if (_uiState.value.role == "PILOT" && _uiState.value.step == LobbyUiState.STEP_WAITING && myId.isNotBlank()) {
+                if (_uiState.value.step == LobbyUiState.STEP_WAITING && myId.isNotBlank()) {
                     val myReq = pending[myId]
-                    // Automatic Ejection Protocol: if removed (null after having been present or rejected)
                     if (myReq == null && pending.isNotEmpty() && _uiState.value.pendingPilots.containsKey(myId)) {
                         settings.clearEnduranceSession()
                         _uiState.value = LobbyUiState(
-                            step = LobbyUiState.STEP_ROLE_SELECT,
+                            step = LobbyUiState.STEP_SETUP,
                             error = "You have been removed from the team by the Crew Chief."
                         )
                     } else if (myReq?.status == "REJECTED") {
                         settings.clearEnduranceSession()
                         _uiState.value = LobbyUiState(
-                            step = LobbyUiState.STEP_ROLE_SELECT,
+                            step = LobbyUiState.STEP_SETUP,
                             error = "Your access request has been rejected by the team."
                         )
                     } else if (myReq?.status == "ACCEPTED") {
@@ -203,7 +136,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
             syncClient.observeSessionState(code).collect { sessionState ->
                 _uiState.value = _uiState.value.copy(sessionState = sessionState.state)
                 if (sessionState.state == "RACING") {
-                    _uiState.value = _uiState.value.copy(navigateToSession = _uiState.value.role)
+                    _uiState.value = _uiState.value.copy(navigateToSession = "PILOT")
                 }
             }
         }
