@@ -136,7 +136,8 @@ class FirebaseRestLink(
 
     private fun fetchInstructions() {
         try {
-            val txt = request("GET", "instructions", null, "").trim()
+            val room = settings.room.ifBlank { settings.ensureRoom() }
+            val txt = request("GET", "rooms/$room/instructions", null, "").trim()
             if (txt.isNotEmpty() && txt != "null") {
                 val obj = JSONObject(txt)
                 val text = obj.optString("text", "").ifBlank { obj.optString("message", "") }

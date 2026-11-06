@@ -12,7 +12,12 @@ class FirebaseRestClient(private val dbUrl: String, private val room: String) {
             query
         }
         val cleanPath = if (path.endsWith(".json") || path.contains(".json?")) path else "$path.json"
-        val url = URL("$dbUrl/rooms/$room/$cleanPath$authParam")
+        val fullPath = if (cleanPath.startsWith("rooms/") || cleanPath.startsWith("teams/") || cleanPath.startsWith("circuits/")) {
+            cleanPath
+        } else {
+            "rooms/$room/$cleanPath"
+        }
+        val url = URL("${dbUrl.trimEnd('/')}/$fullPath$authParam")
         val c = url.openConnection() as HttpURLConnection
         try {
             c.requestMethod = method
