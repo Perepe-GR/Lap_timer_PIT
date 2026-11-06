@@ -4,8 +4,9 @@ import android.app.Application
 import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.database.FirebaseDatabase
 
-/** Main Application class to guarantee early FirebaseApp initialization. */
+/** Main Application class to guarantee early FirebaseApp initialization and offline persistence. */
 class LapTimerApplication : Application() {
 
     companion object {
@@ -15,6 +16,7 @@ class LapTimerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         initFirebase()
+        enableOfflinePersistence()
     }
 
     private fun initFirebase() {
@@ -37,6 +39,15 @@ class LapTimerApplication : Application() {
             }
         } else {
             Log.i(TAG, "FirebaseApp is already initialized.")
+        }
+    }
+
+    private fun enableOfflinePersistence() {
+        try {
+            FirebaseDatabase.getInstance("https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app").setPersistenceEnabled(true)
+            Log.i(TAG, "Firebase Realtime Database offline persistence enabled successfully.")
+        } catch (e: Exception) {
+            Log.w(TAG, "Firebase setPersistenceEnabled exception: ${e.message}")
         }
     }
 }
