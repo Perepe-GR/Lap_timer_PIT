@@ -85,7 +85,7 @@
         const db = firebase.database();
         let activeTeamName = null;
 
-        // Firebase Connection State Listener
+        // Firebase Connection State Listener & Automatic Reconnection Recovery
         db.ref('.info/connected').on('value', snap => {
             const connected = snap.val() === true;
             const dot = document.getElementById('connection-dot');
@@ -95,6 +95,10 @@
                     dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
                     statusTxt.innerText = 'En Línea';
                     statusTxt.className = 'text-xs text-emerald-400 font-semibold';
+                    if (activeTeamName) {
+                        initPitListeners(activeTeamName);
+                        loadCircuitsRepository();
+                    }
                 } else {
                     dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
                     statusTxt.innerText = 'Sin Conexión (Offline)';
@@ -139,7 +143,7 @@
                         return;
                     }
                 }
-                // Fallback to /teams/{teamName}
+                // Fallback to /teams/{teamName} (supports multiple concurrent Crew Chief sessions)
                 db.ref('teams/' + teamName).once('value').then(snap2 => {
                     const teamData = snap2.val();
                     if (teamData && (teamData.pin === pin || teamData.pinHash === pin)) {
