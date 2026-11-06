@@ -1,21 +1,30 @@
 package com.ejemplo.laptimer.util
 
 object ValidationUtils {
-    /**
-     * Checks that identifier (Team Name / Room Code) has between 6 and 15 alphanumeric characters with spaces (no special symbols).
-     */
-    fun validateIdentifier(input: String): Boolean {
-        val trimmed = input.trim()
-        if (trimmed.length !in 6..15) return false
-        return trimmed.all { it.isLetterOrDigit() || it.isWhitespace() }
+
+    private val identifierPattern = Regex("^[a-zA-Z0-9 ]{6,15}$")
+    private val pinPattern = Regex("^[0-9]{4,6}$")
+
+    fun validateIdentifier(identifier: String): Result<Unit> {
+        val trimmed = identifier.trim()
+        return when {
+            trimmed.length !in 6..15 ->
+                Result.failure(IllegalArgumentException("El identificador debe tener entre 6 y 15 caracteres."))
+            !identifierPattern.matches(trimmed) ->
+                Result.failure(IllegalArgumentException("El identificador solo puede contener letras, números y espacios (sin símbolos)."))
+            else -> Result.success(Unit)
+        }
     }
 
-    /**
-     * Checks that PIN is strictly numeric and between 4 and 6 digits.
-     */
-    fun validatePin(pin: String): Boolean {
+    fun validatePin(pin: String): Result<Unit> {
         val trimmed = pin.trim()
-        if (trimmed.length !in 4..6) return false
-        return trimmed.all { it.isDigit() }
+        return when {
+            !pinPattern.matches(trimmed) ->
+                Result.failure(IllegalArgumentException("El PIN debe ser exclusivamente numérico y tener entre 4 y 6 dígitos."))
+            else -> Result.success(Unit)
+        }
     }
+
+    fun isValidIdentifier(identifier: String): Boolean = validateIdentifier(identifier).isSuccess
+    fun isValidPin(pin: String): Boolean = validatePin(pin).isSuccess
 }

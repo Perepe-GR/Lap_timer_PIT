@@ -80,16 +80,19 @@ class JoinTeamFragment : Fragment() {
             val name = etPilotName.text.toString().trim()
 
             var valid = true
-            if (!ValidationUtils.validateIdentifier(code)) {
-                etCode.error = "Team Code must be 6-15 alphanumeric characters."
+            val codeRes = ValidationUtils.validateIdentifier(code)
+            if (codeRes.isFailure) {
+                etCode.error = codeRes.exceptionOrNull()?.message
                 valid = false
             }
-            if (!ValidationUtils.validatePin(pin)) {
-                etPin.error = "PIN must be strictly numeric (4-6 digits)."
+            val pinRes = ValidationUtils.validatePin(pin)
+            if (pinRes.isFailure) {
+                etPin.error = pinRes.exceptionOrNull()?.message
                 valid = false
             }
-            if (!ValidationUtils.validateIdentifier(name)) {
-                etPilotName.error = "Driver Name must be 6-15 alphanumeric characters with spaces."
+            val nameRes = ValidationUtils.validateIdentifier(name)
+            if (nameRes.isFailure) {
+                etPilotName.error = nameRes.exceptionOrNull()?.message
                 valid = false
             }
             if (!valid) return@setOnClickListener

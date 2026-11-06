@@ -121,12 +121,14 @@ class CreateTeamFragment : Fragment() {
             val circuitName = circuits.getOrNull(spCircuit.selectedItemPosition) ?: "Circuit 1"
 
             var valid = true
-            if (!ValidationUtils.validateIdentifier(name)) {
-                etTeamName.error = "Team Name must be 6-15 alphanumeric characters with spaces."
+            val nameRes = ValidationUtils.validateIdentifier(name)
+            if (nameRes.isFailure) {
+                etTeamName.error = nameRes.exceptionOrNull()?.message
                 valid = false
             }
-            if (!ValidationUtils.validatePin(code)) {
-                etCode.error = "PIN must be strictly numeric (4-6 digits)."
+            val pinRes = ValidationUtils.validatePin(code)
+            if (pinRes.isFailure) {
+                etCode.error = pinRes.exceptionOrNull()?.message
                 valid = false
             }
             if (!valid) return@setOnClickListener
