@@ -71,12 +71,25 @@ fun EnduranceSyncClient.observeInstructions(code: String, carKey: String): Flow<
                 val trimmed = res.trim()
                 if (trimmed.startsWith("{")) {
                     val obj = JSONObject(trimmed)
-                    emit(EnduranceSyncClient.TacticalInstruction(
-                        text = obj.optString("text", obj.optString("message", "")),
-                        bg = obj.optString("bg", "amarillo"),
-                        t = obj.optLong("t", obj.optLong("timestamp", 0L))
-                    ))
+                    val textVal = obj.optString("text", "").ifBlank { obj.optString("message", "") }
+                    val bgVal = obj.optString("bg", "amarillo")
+                    val flagVal = obj.optString("flag", "")
+                    val tVal = obj.optLong("t", obj.optLong("timestamp", 0L))
+                    if (textVal.isNotBlank()) {
+                        emit(EnduranceSyncClient.TacticalInstruction(
+                            text = textVal,
+                            bg = bgVal,
+                            flag = flagVal,
+                            t = tVal
+                        ))
+                    } else {
+                        emit(null)
+                    }
+                } else {
+                    emit(null)
                 }
+            } else {
+                emit(null)
             }
         }
         delay(3000L)

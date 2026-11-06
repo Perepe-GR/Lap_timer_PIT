@@ -1,8 +1,11 @@
 package com.ejemplo.laptimer.firebase
 
-import com.ejemplo.laptimer.net.StintTarget
-
-class PitMessage(val key: String, val text: String, val bg: String)
+class PitMessage(
+    val key: String,
+    val text: String,
+    val bg: String,
+    val flag: String = ""
+)
 
 class SwapRequest(
     val id: String,

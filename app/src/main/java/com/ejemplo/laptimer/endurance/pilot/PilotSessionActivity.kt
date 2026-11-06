@@ -42,7 +42,6 @@ class PilotSessionActivity : AppCompatActivity() {
             setPadding(dp(20), dp(16), dp(20), dp(16))
         }
 
-        // Top Navigation Header (Back + Title)
         val navHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -66,7 +65,6 @@ class PilotSessionActivity : AppCompatActivity() {
         navHeader.addView(navTitle)
         rootLayout.addView(navHeader)
 
-        // Floating Tactical Instruction Banner (Initially GONE)
         instructionBanner = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -93,10 +91,7 @@ class PilotSessionActivity : AppCompatActivity() {
             }
         }
         instructionBanner.addView(btnCloseBanner)
-
-        val lpBanner = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        lpBanner.bottomMargin = dp(16)
-        rootLayout.addView(instructionBanner, lpBanner)
+        rootLayout.addView(instructionBanner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
 
         txtHeader = TextView(this).apply {
             textSize = 22f
@@ -147,14 +142,10 @@ class PilotSessionActivity : AppCompatActivity() {
             setPadding(0, dp(14), 0, dp(14))
             setOnClickListener { confirmExit() }
         }
-        val lpBtn = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        lpBtn.topMargin = dp(24)
-        rootLayout.addView(btnExit, lpBtn)
+        rootLayout.addView(btnExit, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
 
         setContentView(rootLayout)
-
         viewModel.startSession(teamCode, pilotId)
-
         observeState()
     }
 
@@ -162,14 +153,13 @@ class PilotSessionActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
                 if (state.isCurrentPilot) {
-                    rootLayout.setBackgroundColor(Color.parseColor("#16A34A")) // Green when ON_TRACK
+                    rootLayout.setBackgroundColor(Color.parseColor("#16A34A"))
                     txtStatus.text = "ON TRACK · YOUR STINT"
-                    txtStatus.setTextColor(Color.WHITE)
                 } else {
-                    rootLayout.setBackgroundColor(Color.parseColor("#C2410C")) // Orange/amber when RESTING
+                    rootLayout.setBackgroundColor(Color.parseColor("#C2410C"))
                     txtStatus.text = "RESTING · Awaiting stint (~${state.estimatedStintMinutes} min)"
-                    txtStatus.setTextColor(Color.WHITE)
                 }
+                txtStatus.setTextColor(Color.WHITE)
 
                 txtTimer.text = if (state.currentLapMs > 0) String.format(java.util.Locale.US, "%.1f s", state.currentLapMs / 1000.0) else "--:--.--"
                 txtBest.text = "BEST: " + (state.bestLapMs?.let { String.format(java.util.Locale.US, "%.2f s", it / 1000.0) } ?: "--:--")

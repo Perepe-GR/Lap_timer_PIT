@@ -20,6 +20,7 @@ class EnduranceSyncClient(
     data class TacticalInstruction(
         val text: String = "",
         val bg: String = "amarillo",
+        val flag: String = "",
         val t: Long = 0L
     )
 

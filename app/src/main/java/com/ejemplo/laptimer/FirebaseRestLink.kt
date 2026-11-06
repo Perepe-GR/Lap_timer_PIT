@@ -28,16 +28,11 @@ class FirebaseRestLink(
     private var first = true
     private var purged = false
 
-    private val client: FirebaseRestClient
-        get() = FirebaseRestClient(settings.dbUrl, settings.room)
+    private val client: FirebaseRestClient get() = FirebaseRestClient(settings.dbUrl, settings.room)
 
     private fun request(method: String, path: String, body: String?, query: String): String {
         val token = runBlocking {
-            try {
-                FirebaseAuthManager.getIdToken()
-            } catch (_: Exception) {
-                null
-            }
+            try { FirebaseAuthManager.getIdToken() } catch (_: Exception) { null }
         }
         return client.request(method, path, body, query, token)
     }
@@ -72,20 +67,14 @@ class FirebaseRestLink(
         if (!settings.enabled || settings.dbUrl.isBlank() || settings.room.isBlank()) return
         val car = settings.carKey()
         Thread {
-            try {
-                request("PUT", "races/$car/$id", json, "")
-            } catch (_: Exception) {
-            }
+            try { request("PUT", "races/$car/$id", json, "") } catch (_: Exception) {}
         }.start()
     }
 
     fun clearCommandNow() {
         val car = settings.carKey()
         Thread {
-            try {
-                request("PUT", "cmd/$car", "null", "")
-            } catch (_: Exception) {
-            }
+            try { request("PUT", "cmd/$car", "null", "") } catch (_: Exception) {}
         }.start()
     }
 
@@ -137,9 +126,10 @@ class FirebaseRestLink(
         val msgs = ArrayList<PitMessage>()
         for (k in fresh) {
             val m = o.getJSONObject(k)
-            val text = m.optString("text", "")
+            val text = m.optString("text", m.optString("message", ""))
             val bg = m.optString("bg", "amarillo")
-            if (text.isNotBlank()) msgs.add(PitMessage(k, text, bg))
+            val flag = m.optString("flag", "")
+            if (text.isNotBlank()) msgs.add(PitMessage(k, text, bg, flag))
         }
         if (msgs.isNotEmpty()) onMessages(msgs)
     }
@@ -149,11 +139,12 @@ class FirebaseRestLink(
             val txt = request("GET", "instructions", null, "").trim()
             if (txt.isNotEmpty() && txt != "null") {
                 val obj = JSONObject(txt)
-                val text = obj.optString("text", "")
+                val text = obj.optString("text", "").ifBlank { obj.optString("message", "") }
                 val bg = obj.optString("bg", "amarillo")
-                val t = obj.optLong("t", System.currentTimeMillis())
+                val flag = obj.optString("flag", "")
+                val t = obj.optLong("t", obj.optLong("timestamp", System.currentTimeMillis()))
                 if (text.isNotBlank()) {
-                    onMessages(listOf(PitMessage("inst-$t", text, bg)))
+                    onMessages(listOf(PitMessage("inst-$t", text, bg, flag)))
                 }
             }
         } catch (_: Exception) {}
