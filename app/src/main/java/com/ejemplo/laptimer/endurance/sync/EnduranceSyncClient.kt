@@ -132,8 +132,11 @@ class EnduranceSyncClient(
     }
 
     suspend fun requestJoin(code: String, pilotId: String, pilotName: String, uid: String): Result<Unit> = runCatching {
-        val pending = PendingPilot(id = pilotId, name = pilotName, uid = uid, status = "PENDING", requestedAt = System.currentTimeMillis())
-        request("PUT", "rooms/$code/pending/$pilotId", JSONObject(pending.toMap()).toString())
+        val deviceUid = uid.ifBlank { FirebaseAuthManager.ensureAuthenticated() }
+        val pending = PendingPilot(id = pilotId, name = pilotName, uid = deviceUid, status = "PENDING", requestedAt = System.currentTimeMillis())
+        val json = JSONObject(pending.toMap()).toString()
+        request("PUT", "rooms/$code/requests/$deviceUid", json)
+        request("PUT", "rooms/$code/pending/$deviceUid", json)
     }
 
     suspend fun joinTeam(code: String, inputPin: String, pilotId: String, pilotName: String): Result<TeamMeta> = runCatching {
@@ -158,9 +161,11 @@ class EnduranceSyncClient(
     fun observePendingPilots(code: String): Flow<Map<String, PendingPilot>> = flow {
         while (true) {
             runCatching {
-                val res = request("GET", "rooms/$code/pending")
-                if (res.isNotBlank() && res != "null") {
-                    val trimmed = res.trim()
+                val resReq = request("GET", "rooms/$code/requests")
+                val resPending = request("GET", "rooms/$code/pending")
+                val text = if (resReq.isNotBlank() && resReq != "null" && resReq != "{}") resReq else resPending
+                if (text.isNotBlank() && text != "null") {
+                    val trimmed = text.trim()
                     if (trimmed.startsWith("{")) {
                         val result = mutableMapOf<String, PendingPilot>()
                         val root = JSONObject(trimmed)
@@ -194,11 +199,16 @@ class EnduranceSyncClient(
         val member = MemberInfo(role = "pilot", name = pilotName, t = System.currentTimeMillis())
         request("PUT", "rooms/$code/members/$uid", JSONObject(member.toMap()).toString())
         val acceptedPending = PendingPilot(id = pilotId, name = pilotName, uid = uid, status = "ACCEPTED", requestedAt = System.currentTimeMillis())
-        request("PUT", "rooms/$code/pending/$pilotId", JSONObject(acceptedPending.toMap()).toString())
+        val json = JSONObject(acceptedPending.toMap()).toString()
+        request("PUT", "rooms/$code/requests/$uid", json)
+        request("PUT", "rooms/$code/pending/$uid", json)
     }
 
-    suspend fun rejectPilot(code: String, pilotId: String): Result<Unit> = runCatching {
-        request("PUT", "rooms/$code/pending/$pilotId", "null")
+    suspend fun rejectPilot(code: String, uid: String): Result<Unit> = runCatching {
+        val rejected = PendingPilot(status = "REJECTED", uid = uid)
+        val json = JSONObject(rejected.toMap()).toString()
+        request("PUT", "rooms/$code/requests/$uid", json)
+        request("PUT", "rooms/$code/pending/$uid", json)
     }
 
     data class TacticalInstruction(val text: String = "", val bg: String = "amarillo")
