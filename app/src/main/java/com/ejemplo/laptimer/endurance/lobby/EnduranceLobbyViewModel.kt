@@ -21,6 +21,7 @@ data class LobbyUiState(
     val pin: String = "",
     val teamName: String = "",
     val circuitId: String = "",
+    val myPilotId: String = "",
     val pilots: Map<String, PilotData> = emptyMap(),
     val pendingPilots: Map<String, PendingPilot> = emptyMap(),
     val sessionState: String = "LOBBY",
@@ -65,16 +66,21 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 FirebaseAuthManager.ensureAuthenticated()
             } catch (e: Exception) {
                 Log.e("EnduranceLobbyViewModel", "Firebase Auth failed prior to createTeam: ${e.message}", e)
-                _uiState.value = _uiState.value.copy(error = "Authentication failed: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    pin = "",
+                    error = "Error de conexión con el servicio de autenticación: ${e.message}"
+                )
                 return@launch
             }
-            Log.i("EnduranceLobbyViewModel", "Authenticated UID for creation: $currentUid")
 
             val metaRes = syncClient.fetchTeamMeta(cleanCode)
             val existingMeta = metaRes.getOrNull()
             if (existingMeta != null && existingMeta.leaderUid.isNotBlank() && existingMeta.leaderUid != currentUid) {
                 Log.w("EnduranceLobbyViewModel", "Crew Chief collision: room $cleanCode already owned by ${existingMeta.leaderUid}")
-                _uiState.value = _uiState.value.copy(error = "Only one Crew Chief is allowed per team session.")
+                _uiState.value = _uiState.value.copy(
+                    pin = "",
+                    error = "Solo se permite un Cap de Equipo (Crew Chief) por sala."
+                )
                 return@launch
             }
 
@@ -94,7 +100,10 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
             } else {
                 val err = res.exceptionOrNull()
                 Log.e("EnduranceLobbyViewModel", "createTeam Result FAILURE: ${err?.message}", err)
-                _uiState.value = _uiState.value.copy(error = "Failed to create team: ${err?.message}")
+                _uiState.value = _uiState.value.copy(
+                    pin = "",
+                    error = "Error de conexión o tiempo de espera agotado: ${err?.message}"
+                )
             }
         }
     }
@@ -105,7 +114,10 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
             val metaRes = syncClient.fetchTeamMeta(cleanCode)
             val meta = metaRes.getOrNull()
             if (meta == null) {
-                _uiState.value = _uiState.value.copy(error = "Team code not found")
+                _uiState.value = _uiState.value.copy(
+                    pin = "",
+                    error = "PIN incorrecto o sala no encontrada"
+                )
                 return@launch
             }
             val isValidPin = if (meta.pinHash.isNotBlank()) {
@@ -114,7 +126,10 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 meta.code == inputPin.trim()
             }
             if (!isValidPin) {
-                _uiState.value = _uiState.value.copy(error = "Incorrect PIN")
+                _uiState.value = _uiState.value.copy(
+                    pin = "",
+                    error = "PIN incorrecto o sala no encontrada"
+                )
                 return@launch
             }
             val joinRes = syncClient.joinTeam(cleanCode, inputPin, pilotId, pilotName)
@@ -123,27 +138,40 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                     teamCode = cleanCode,
                     teamName = meta.name,
                     circuitId = meta.circuitId,
+                    myPilotId = pilotId,
                     pin = inputPin.trim(),
                     step = LobbyUiState.STEP_WAITING,
                     error = null
                 )
                 startObserving(cleanCode)
             } else {
-                _uiState.value = _uiState.value.copy(error = "Failed to request join: ${joinRes.exceptionOrNull()?.message}")
+                val err = joinRes.exceptionOrNull()
+                _uiState.value = _uiState.value.copy(
+                    pin = "",
+                    error = "Error de conexión o tiempo de espera agotado: ${err?.message}"
+                )
             }
         }
     }
 
     fun acceptPilot(code: String, pilotId: String, pilotName: String, uid: String) {
         viewModelScope.launch {
-            syncClient.acceptPilot(code, pilotId, pilotName, uid)
+            try {
+                syncClient.acceptPilot(code, pilotId, pilotName, uid)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Error al aceptar piloto: ${e.message}")
+            }
         }
     }
 
     fun startSession() {
         val code = _uiState.value.teamCode
         viewModelScope.launch {
-            syncClient.setSessionState(code, "RACING")
+            try {
+                syncClient.setSessionState(code, "RACING")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Error al iniciar sesión: ${e.message}")
+            }
         }
     }
 
@@ -156,6 +184,19 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             syncClient.observePendingPilots(code).collect { pending ->
                 _uiState.value = _uiState.value.copy(pendingPilots = pending)
+                val myId = _uiState.value.myPilotId
+                if (_uiState.value.role == "PILOT" && _uiState.value.step == LobbyUiState.STEP_WAITING && myId.isNotBlank()) {
+                    val myReq = pending[myId]
+                    if (myReq?.status == "REJECTED") {
+                        _uiState.value = _uiState.value.copy(
+                            step = LobbyUiState.STEP_SETUP,
+                            pin = "",
+                            error = "Tu solicitud ha sido rechazada por el equipo."
+                        )
+                    } else if (myReq?.status == "ACCEPTED") {
+                        _uiState.value = _uiState.value.copy(navigateToSession = "PILOT")
+                    }
+                }
             }
         }
         viewModelScope.launch {
