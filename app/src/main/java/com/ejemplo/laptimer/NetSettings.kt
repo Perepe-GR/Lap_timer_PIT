@@ -6,12 +6,12 @@ import com.ejemplo.laptimer.net.StintTarget
 import com.ejemplo.laptimer.util.ValidationUtils
 import org.json.JSONArray
 
-/** Ajustes de red, de sesión y estado del stint, guardados en el móvil. */
+/** Network, session and stint status settings, stored locally on the device. */
 class NetSettings(context: Context) {
     private val store = NetSettingsStore(context)
     private val p get() = store.prefs
 
-    // ---- Red ----
+    // ---- Network ----
     var enabled: Boolean get() = p.getBoolean("enabled", false); set(v) = store.putB("enabled", v)
     var dbUrl: String get() = p.getString("db", "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app") ?: "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"; set(v) = store.putS("db", v.trim().trimEnd('/'))
     var room: String get() = p.getString("room", "") ?: ""; set(v) = store.putS("room", v.trim().uppercase())
@@ -22,19 +22,39 @@ class NetSettings(context: Context) {
     var panelUrl: String get() = p.getString("panel", "https://user.github.io/pit-panel/") ?: "https://user.github.io/pit-panel/"; set(v) = store.putS("panel", v.trim())
     var saveTrace: Boolean get() = p.getBoolean("trace", true); set(v) = store.putB("trace", v)
 
-    // ---- Identidad ----
+    // ---- Identity ----
     var carName: String get() = p.getString("carName", "Car 1") ?: "Car 1"; set(v) = store.putS("carName", v.trim().ifEmpty { "Car 1" })
     var driverName: String get() = p.getString("driver", "Driver 1") ?: "Driver 1"; set(v) = store.putS("driver", v.trim().ifEmpty { "Driver 1" })
     fun carKey(): String = StintTarget.keyOf(carName)
 
-    // ---- Ajustes de sesión ----
+    // ---- Endurance Session Persistence ----
+    var activeRoomCode: String get() = p.getString("activeRoomCode", "") ?: ""; set(v) = store.putS("activeRoomCode", v.trim().uppercase())
+    var userRole: String get() = p.getString("userRole", "") ?: ""; set(v) = store.putS("userRole", v)
+    var deviceUid: String get() = p.getString("deviceUid", "") ?: ""; set(v) = store.putS("deviceUid", v)
+    var sessionActive: Boolean get() = p.getBoolean("sessionActive", false); set(v) = store.putB("sessionActive", v)
+
+    fun clearEnduranceSession() {
+        activeRoomCode = ""
+        userRole = ""
+        deviceUid = ""
+        sessionActive = false
+    }
+
+    fun saveEnduranceSession(roomCode: String, role: String, uid: String) {
+        activeRoomCode = roomCode
+        userRole = role
+        deviceUid = uid
+        sessionActive = true
+    }
+
+    // ---- Session Settings ----
     var lockKmh: Int get() = p.getInt("lockKmh", 10); set(v) = store.putI("lockKmh", v.coerceAtLeast(0))
     var rangePct: Float get() = p.getFloat("rangePct", 2f); set(v) = store.putF("rangePct", v.coerceIn(0.5f, 10f))
     var msgSectors: Int get() = p.getInt("msgSectors", 2); set(v) = store.putI("msgSectors", v.coerceIn(1, 6))
     var batWarn: Int get() = p.getInt("batWarn", 20); set(v) = store.putI("batWarn", v.coerceIn(1, 90))
     var batCrit: Int get() = p.getInt("batCrit", 10); set(v) = store.putI("batCrit", v.coerceIn(1, 90))
 
-    // ---- Modo de carrera ----
+    // ---- Race Mode ----
     var raceMode: String get() = p.getString("raceMode", "trackday") ?: "trackday"; set(v) = store.putS("raceMode", v)
     fun isEndurance(): Boolean = raceMode == "resistencia"
     fun isLongRun(): Boolean = raceMode == "long_run"
@@ -48,19 +68,19 @@ class NetSettings(context: Context) {
 
     fun raceModeLabel(): String = when (raceMode) {
         "sprint" -> "Sprint"
-        "resistencia" -> "Resistencia"
+        "resistencia" -> "Endurance"
         "long_run" -> "Long Run"
         else -> "Track day"
     }
 
     var gpsSource: String get() = p.getString("gpsSource", "usb") ?: "usb"; set(v) = store.putS("gpsSource", v)
     fun gpsSourceLabel(): String = when (gpsSource) {
-        "internal" -> "GPS interno (Móvil / Tablet)"
+        "internal" -> "Internal GPS (Phone / Tablet)"
         "racebox" -> "RaceBox (BLE / Mock)"
         "dragy" -> "Dragy (10Hz / 25Hz)"
         "garmin" -> "Garmin (Catalyst / GLO)"
-        "external_bt" -> "GPS Bluetooth externo (NMEA)"
-        else -> "Antena USB u-blox (25 Hz)"
+        "external_bt" -> "External Bluetooth GPS (NMEA)"
+        else -> "USB u-blox Antenna (25 Hz)"
     }
 
     var lapSummarySec: Int get() = p.getInt("lapSummarySec", 4); set(v) = store.putI("lapSummarySec", v.coerceIn(3, 6))

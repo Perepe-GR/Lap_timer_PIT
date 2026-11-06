@@ -4,9 +4,6 @@ import android.util.Log
 import com.ejemplo.laptimer.firebase.FirebaseAuthManager
 import com.ejemplo.laptimer.util.SecurityUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
@@ -16,14 +13,19 @@ import java.net.URL
 class EnduranceSyncClient(
     private val dbUrl: String = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
 ) {
-
     companion object {
         private const val TAG = "EnduranceSyncClient"
     }
 
+    data class TacticalInstruction(
+        val text: String = "",
+        val bg: String = "amarillo",
+        val t: Long = 0L
+    )
+
     private suspend fun getAuthToken(): String? = FirebaseAuthManager.getIdToken()
 
-    private suspend fun request(method: String, path: String, body: String? = null, query: String = ""): String = withContext(Dispatchers.IO) {
+    suspend fun request(method: String, path: String, body: String? = null, query: String = ""): String = withContext(Dispatchers.IO) {
         val cleanDb = dbUrl.trimEnd('/')
         val token = getAuthToken()
         val authQuery = if (!token.isNullOrBlank()) {
@@ -32,7 +34,7 @@ class EnduranceSyncClient(
             query
         }
         val url = URL("$cleanDb/$path.json$authQuery")
-        Log.d(TAG, "HTTP $method -> $path (auth token attached: ${!token.isNullOrBlank()})")
+        Log.d(TAG, "HTTP $method -> $path")
         val c = url.openConnection() as HttpURLConnection
         try {
             c.requestMethod = method
@@ -46,11 +48,10 @@ class EnduranceSyncClient(
             val code = c.responseCode
             val stream = if (code in 200..299) c.inputStream else c.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
-            Log.d(TAG, "HTTP $code <- $path")
             if (code !in 200..299) throw IOException("HTTP $code")
             text
         } catch (e: Exception) {
-            Log.e(TAG, "HTTP Request Error [$method $path] on $url: ${e.message}", e)
+            Log.e(TAG, "HTTP Request Error [$method $path]: ${e.message}", e)
             throw e
         } finally {
             c.disconnect()
@@ -58,14 +59,13 @@ class EnduranceSyncClient(
     }
 
     suspend fun connectOrCreateRoom(code: String, pin: String, role: String, name: String, circuitId: String): Result<TeamMeta> = runCatching {
-        Log.i(TAG, "connectOrCreateRoom STARTED for code: $code, role: $role, name: $name")
+        Log.i(TAG, "connectOrCreateRoom for code: $code, role: $role")
         val currentUid = FirebaseAuthManager.ensureAuthenticated()
         val cleanCode = code.trim().uppercase()
         val metaRes = fetchTeamMeta(cleanCode)
         val meta = metaRes.getOrNull()
 
         if (meta == null) {
-            // Creation logic (Room does NOT exist)
             val hashResult = SecurityUtils.hashPin(pin)
             val newMeta = TeamMeta(
                 code = cleanCode,
@@ -80,23 +80,28 @@ class EnduranceSyncClient(
             )
             val jsonPayload = JSONObject(newMeta.toMap()).toString()
             request("PUT", "rooms/$cleanCode/meta", jsonPayload)
+
+            // Dual-Write Authentication: Simultaneously write security metadata to /teams/{cleanCode}
+            val teamPayload = JSONObject().apply {
+                put("name", newMeta.name)
+                put("pinHash", newMeta.pinHash)
+                put("salt", newMeta.salt)
+                put("updatedAt", System.currentTimeMillis())
+            }.toString()
+            request("PUT", "teams/$cleanCode", teamPayload)
+
             request("PUT", "rooms/$cleanCode/strategy/leaderUid", JSONObject().put("uid", currentUid).toString())
             request("PUT", "rooms/$cleanCode/session", JSONObject(SessionState("LOBBY", "", 0L, 0L).toMap()).toString())
             registerMember(cleanCode, currentUid, if (role == "CREW_CHIEF") "crew_chief" else "pilot", name).getOrThrow()
-            Log.i(TAG, "Room created successfully: $cleanCode")
             newMeta
         } else {
-            // Reconnection logic (Room DOES exist)
             val isValidPin = if (meta.pinHash.isNotBlank()) {
                 SecurityUtils.verifyPin(pin, meta.salt, meta.pinHash)
             } else {
                 meta.code == pin.trim()
             }
-            if (!isValidPin) {
-                throw SecurityException("Incorrect PIN for existing room")
-            }
+            if (!isValidPin) throw SecurityException("Incorrect PIN for existing room")
             registerMember(cleanCode, currentUid, if (role == "CREW_CHIEF") "crew_chief" else "pilot", name).getOrThrow()
-            Log.i(TAG, "Reconnected to room successfully: $cleanCode")
             meta
         }
     }
@@ -111,7 +116,6 @@ class EnduranceSyncClient(
     }
 
     suspend fun fetchTeamMeta(code: String): Result<TeamMeta?> = runCatching {
-        Log.d(TAG, "fetchTeamMeta for code: $code")
         val res = request("GET", "rooms/$code/meta")
         if (res.isBlank() || res == "null") return@runCatching null
         val trimmed = res.trim()
@@ -121,9 +125,7 @@ class EnduranceSyncClient(
             val keys = obj.keys()
             while (keys.hasNext()) {
                 val k = keys.next()
-                if (!obj.isNull(k)) {
-                    map[k] = obj.get(k)
-                }
+                if (!obj.isNull(k)) map[k] = obj.get(k)
             }
             teamMetaFromMap(map)
         } else {
@@ -150,229 +152,9 @@ class EnduranceSyncClient(
         } else {
             meta.code == inputPin.trim()
         }
-        if (!isValidPin) {
-            throw SecurityException("Incorrect PIN")
-        }
+        if (!isValidPin) throw SecurityException("Incorrect PIN")
 
         requestJoin(cleanCode, pilotId, pilotName, currentUid).getOrThrow()
         meta
-    }
-
-    fun observePendingPilots(code: String): Flow<Map<String, PendingPilot>> = flow {
-        while (true) {
-            runCatching {
-                val resReq = request("GET", "rooms/$code/requests")
-                val resPending = request("GET", "rooms/$code/pending")
-                val text = if (resReq.isNotBlank() && resReq != "null" && resReq != "{}") resReq else resPending
-                if (text.isNotBlank() && text != "null") {
-                    val trimmed = text.trim()
-                    if (trimmed.startsWith("{")) {
-                        val result = mutableMapOf<String, PendingPilot>()
-                        val root = JSONObject(trimmed)
-                        val keys = root.keys()
-                        while (keys.hasNext()) {
-                            val pId = keys.next()
-                            if (!root.isNull(pId)) {
-                                val pObj = root.getJSONObject(pId)
-                                val map = mutableMapOf<String, Any?>()
-                                val ik = pObj.keys()
-                                while (ik.hasNext()) {
-                                    val k = ik.next()
-                                    if (!pObj.isNull(k)) map[k] = pObj.get(k)
-                                }
-                                result[pId] = pendingPilotFromMap(map)
-                            }
-                        }
-                        emit(result)
-                    }
-                } else {
-                    emit(emptyMap())
-                }
-            }
-            delay(3000L)
-        }
-    }
-
-    suspend fun acceptPilot(code: String, pilotId: String, pilotName: String, uid: String): Result<Unit> = runCatching {
-        val info = PilotInfo(pilotId, pilotName, "READY", System.currentTimeMillis())
-        request("PUT", "rooms/$code/pilots/$pilotId/info", JSONObject(info.toMap()).toString())
-        val member = MemberInfo(role = "pilot", name = pilotName, t = System.currentTimeMillis())
-        request("PUT", "rooms/$code/members/$uid", JSONObject(member.toMap()).toString())
-        val acceptedPending = PendingPilot(id = pilotId, name = pilotName, uid = uid, status = "ACCEPTED", requestedAt = System.currentTimeMillis())
-        val json = JSONObject(acceptedPending.toMap()).toString()
-        request("PUT", "rooms/$code/requests/$uid", json)
-        request("PUT", "rooms/$code/pending/$uid", json)
-    }
-
-    suspend fun rejectPilot(code: String, uid: String): Result<Unit> = runCatching {
-        val rejected = PendingPilot(status = "REJECTED", uid = uid)
-        val json = JSONObject(rejected.toMap()).toString()
-        request("PUT", "rooms/$code/requests/$uid", json)
-        request("PUT", "rooms/$code/pending/$uid", json)
-    }
-
-    data class TacticalInstruction(val text: String = "", val bg: String = "amarillo")
-
-    fun observeInstructions(code: String, carKey: String): Flow<TacticalInstruction?> = flow {
-        while (true) {
-            runCatching {
-                val res = request("GET", "rooms/$code/inbox/$carKey")
-                if (res.isNotBlank() && res != "null") {
-                    val trimmed = res.trim()
-                    if (trimmed.startsWith("{")) {
-                        val root = JSONObject(trimmed)
-                        val keys = root.keys()
-                        val list = mutableListOf<String>()
-                        while (keys.hasNext()) list.add(keys.next())
-                        list.sort()
-                        val latestKey = list.lastOrNull()
-                        if (latestKey != null) {
-                            val obj = root.getJSONObject(latestKey)
-                            emit(TacticalInstruction(obj.optString("text", ""), obj.optString("bg", "amarillo")))
-                        }
-                    }
-                }
-            }
-            delay(3000L)
-        }
-    }
-
-    suspend fun setSessionState(code: String, state: String): Result<Unit> = runCatching {
-        request("PUT", "rooms/$code/session/state", JSONObject.quote(state))
-    }
-
-    fun observeSessionState(code: String): Flow<SessionState> = flow {
-        while (true) {
-            runCatching {
-                val res = request("GET", "rooms/$code/session")
-                if (res.isNotBlank() && res != "null") {
-                    val trimmed = res.trim()
-                    if (trimmed.startsWith("{")) {
-                        val obj = JSONObject(trimmed)
-                        val map = mutableMapOf<String, Any?>()
-                        val keys = obj.keys()
-                        while (keys.hasNext()) {
-                            val k = keys.next()
-                            if (!obj.isNull(k)) map[k] = obj.get(k)
-                        }
-                        emit(sessionStateFromMap(map))
-                    }
-                }
-            }
-            delay(3000L)
-        }
-    }
-
-    fun observeStrategy(code: String): Flow<StrategyBase> = flow {
-        while (true) {
-            runCatching {
-                val res = request("GET", "rooms/$code/strategy")
-                if (res.isNotBlank() && res != "null") {
-                    val trimmed = res.trim()
-                    if (trimmed.startsWith("{")) {
-                        val obj = JSONObject(trimmed)
-                        val map = mutableMapOf<String, Any?>()
-                        val keys = obj.keys()
-                        while (keys.hasNext()) {
-                            val k = keys.next()
-                            if (!obj.isNull(k)) map[k] = obj.get(k)
-                        }
-                        emit(strategyBaseFromMap(map))
-                    }
-                }
-            }
-            delay(5000L)
-        }
-    }
-
-    fun observePilots(code: String): Flow<Map<String, PilotData>> = flow {
-        while (true) {
-            runCatching {
-                val res = request("GET", "rooms/$code/pilots")
-                if (res.isNotBlank() && res != "null") {
-                    val trimmed = res.trim()
-                    if (trimmed.startsWith("{")) {
-                        val result = mutableMapOf<String, PilotData>()
-                        val root = JSONObject(trimmed)
-                        val keys = root.keys()
-                        while (keys.hasNext()) {
-                            val pId = keys.next()
-                            if (!root.isNull(pId)) {
-                                val pObj = root.getJSONObject(pId)
-                                val infoMap = mutableMapOf<String, Any?>()
-                                if (pObj.has("info") && !pObj.isNull("info")) {
-                                    val infoObj = pObj.getJSONObject("info")
-                                    val ik = infoObj.keys()
-                                    while (ik.hasNext()) {
-                                        val k = ik.next()
-                                        if (!infoObj.isNull(k)) infoMap[k] = infoObj.get(k)
-                                    }
-                                }
-                                result[pId] = PilotData(info = pilotInfoFromMap(infoMap))
-                            }
-                        }
-                        emit(result)
-                    }
-                }
-            }
-            delay(3000L)
-        }
-    }
-
-    suspend fun pushStint(code: String, stint: Stint): Result<Unit> = runCatching {
-        val path = "rooms/$code/stints/${stint.startTs}"
-        request("PUT", path, JSONObject(stint.toMap()).toString())
-    }
-
-    fun observeStints(code: String): Flow<List<Stint>> = flow {
-        while (true) {
-            runCatching {
-                val res = request("GET", "rooms/$code/stints")
-                if (res.isNotBlank() && res != "null") {
-                    val trimmed = res.trim()
-                    if (trimmed.startsWith("{")) {
-                        val result = mutableListOf<Stint>()
-                        val root = JSONObject(trimmed)
-                        val keys = root.keys()
-                        while (keys.hasNext()) {
-                            val sKey = keys.next()
-                            if (!root.isNull(sKey)) {
-                                val sObj = root.getJSONObject(sKey)
-                                val map = mutableMapOf<String, Any?>()
-                                val kIter = sObj.keys()
-                                while (kIter.hasNext()) {
-                                    val k = kIter.next()
-                                    if (!sObj.isNull(k)) map[k] = sObj.get(k)
-                                }
-                                result.add(stintFromMap(map))
-                            }
-                        }
-                        emit(result)
-                    }
-                }
-            }
-            delay(5000L)
-        }
-    }
-
-    suspend fun updateStrategy(code: String, strategy: StrategyBase): Result<Unit> = runCatching {
-        request("PUT", "rooms/$code/strategy", JSONObject(strategy.toMap()).toString())
-    }
-
-    suspend fun setCurrentPilot(code: String, pilotId: String): Result<Unit> = runCatching {
-        request("PUT", "rooms/$code/session/currentPilotId", JSONObject.quote(pilotId))
-    }
-
-    suspend fun pushLap(code: String, pilotId: String, lap: LapRecord): Result<Unit> = runCatching {
-        request("PUT", "rooms/$code/pilots/$pilotId/laps/${lap.lapNumber}", JSONObject(lap.toMap()).toString())
-    }
-
-    suspend fun updateCurrentLap(code: String, pilotId: String, current: CurrentLap): Result<Unit> = runCatching {
-        val map = mapOf("startTs" to current.startTs, "sectorsMs" to current.sectorsMs, "gpsValid" to current.gpsValid)
-        request("PUT", "rooms/$code/pilots/$pilotId/currentLap", JSONObject(map).toString())
-    }
-
-    suspend fun setLeader(code: String, uid: String): Result<Unit> = runCatching {
-        request("PUT", "rooms/$code/strategy/leaderUid", JSONObject().put("uid", uid).toString())
     }
 }

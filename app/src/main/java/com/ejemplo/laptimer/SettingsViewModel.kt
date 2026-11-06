@@ -76,11 +76,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         var pinErr: String? = null
 
         if (idResult.isFailure) {
-            nameErr = idResult.exceptionOrNull()?.message ?: "Identificador inválido"
+            nameErr = idResult.exceptionOrNull()?.message ?: "Invalid identifier"
             hasError = true
         }
         if (pinResult.isFailure) {
-            pinErr = pinResult.exceptionOrNull()?.message ?: "PIN inválido"
+            pinErr = pinResult.exceptionOrNull()?.message ?: "Invalid PIN"
             hasError = true
         }
 
@@ -108,7 +108,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 settings.salt = hashResult.salt
                 settings.intervalS = current.intervalS
 
-                // Sincronizar en Firebase si está habilitado
+                // Synchronize to Firebase if enabled using Dual-Write Authentication
                 if (current.enabled) {
                     syncTeamToFirebase(teamName, hashResult)
                 }
@@ -116,7 +116,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 _uiState.value = _uiState.value.copy(isLoading = false, saveSuccess = true)
                 onSuccess()
             } catch (e: Exception) {
-                val err = "Error al guardar en Firebase: ${e.message}"
+                val err = "Firebase synchronization error: ${e.message}"
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = err)
                 onError(err)
             }
@@ -133,24 +133,46 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             put("pinHash", hashResult.pinHash)
             put("salt", hashResult.salt)
             put("updatedAt", System.currentTimeMillis())
+        }.toString()
+
+        val metaPayload = JSONObject().apply {
+            put("code", teamName)
+            put("name", teamName)
+            put("pinHash", hashResult.pinHash)
+            put("salt", hashResult.salt)
+            put("updatedAt", System.currentTimeMillis())
+        }.toString()
+
+        // 1. Dual-write to /teams/{teamName}
+        val urlTeams = URL("$dbUrl/teams/$teamName.json$authQuery")
+        val connTeams = urlTeams.openConnection() as HttpURLConnection
+        try {
+            connTeams.requestMethod = "PUT"
+            connTeams.connectTimeout = 5000
+            connTeams.readTimeout = 5000
+            connTeams.doOutput = true
+            connTeams.setRequestProperty("Content-Type", "application/json")
+            connTeams.outputStream.use { it.write(teamPayload.toByteArray(Charsets.UTF_8)) }
+            val code = connTeams.responseCode
+            if (code !in 200..299) throw IOException("HTTP $code")
+        } finally {
+            connTeams.disconnect()
         }
 
-        val url = URL("$dbUrl/teams/$teamName.json$authQuery")
-        val conn = url.openConnection() as HttpURLConnection
+        // 2. Dual-write to /rooms/{teamName}/meta
+        val urlRooms = URL("$dbUrl/rooms/$teamName/meta.json$authQuery")
+        val connRooms = urlRooms.openConnection() as HttpURLConnection
         try {
-            conn.requestMethod = "PATCH"
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.outputStream.use { it.write(teamPayload.toString().toByteArray(Charsets.UTF_8)) }
-
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                throw IOException("HTTP $code")
-            }
+            connRooms.requestMethod = "PUT"
+            connRooms.connectTimeout = 5000
+            connRooms.readTimeout = 5000
+            connRooms.doOutput = true
+            connRooms.setRequestProperty("Content-Type", "application/json")
+            connRooms.outputStream.use { it.write(metaPayload.toByteArray(Charsets.UTF_8)) }
+            val code = connRooms.responseCode
+            if (code !in 200..299) throw IOException("HTTP $code")
         } finally {
-            conn.disconnect()
+            connRooms.disconnect()
         }
     }
 }
