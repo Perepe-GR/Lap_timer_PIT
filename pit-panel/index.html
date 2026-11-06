@@ -130,53 +130,76 @@
             }
         }
 
-        document.getElementById('login-form').addEventListener('submit', (e) => {
+        // Cryptographic SHA-256 with salt hashing matching Android SecurityUtils.kt
+        async function sha256(salt, pin) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(salt + pin.trim());
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function verifyTeamCredentials(teamName, pin) {
+            try {
+                // 1. Read room meta from exact Firebase hierarchy /rooms/{roomCode}/meta
+                const metaSnap = await db.ref('rooms/' + teamName + '/meta').once('value');
+                const meta = metaSnap.val();
+
+                if (meta) {
+                    if (meta.pinHash && meta.salt) {
+                        const computed = await sha256(meta.salt, pin);
+                        if (computed.toLowerCase() === meta.pinHash.toLowerCase()) {
+                            return true;
+                        }
+                    } else if (meta.pin && meta.pin === pin) {
+                        return true;
+                    }
+                }
+
+                // 2. Fallback to /teams/{teamName} legacy/sync node
+                const teamSnap = await db.ref('teams/' + teamName).once('value');
+                const teamData = teamSnap.val();
+                if (teamData) {
+                    if (teamData.pinHash && teamData.salt) {
+                        const computed = await sha256(teamData.salt, pin);
+                        if (computed.toLowerCase() === teamData.pinHash.toLowerCase()) {
+                            return true;
+                        }
+                    } else if (teamData.pin && teamData.pin === pin) {
+                        return true;
+                    }
+                }
+
+                return false;
+            } catch (err) {
+                console.error('Credential verification error:', err);
+                throw err;
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             hideLoginError();
             const teamName = document.getElementById('team-name-input').value.trim().toUpperCase();
             const pin = document.getElementById('team-pin-input').value.trim();
 
-            // Validate against /rooms/{roomCode}/meta and check /rooms/{roomCode}/live telemetry structure
-            Promise.all([
-                db.ref('rooms/' + teamName + '/meta').once('value'),
-                db.ref('rooms/' + teamName + '/live').once('value')
-            ]).then(([metaSnap, liveSnap]) => {
-                const meta = metaSnap.val();
-                const liveData = liveSnap.val();
-                if (meta) {
-                    const pinValid = meta.pinHash ? true : (meta.pin === pin);
-                    if (pinValid) {
-                        activeTeamName = teamName;
-                        document.getElementById('login-section').classList.add('hidden');
-                        document.getElementById('dashboard-section').classList.remove('hidden');
-                        document.getElementById('team-info-badge').classList.remove('hidden');
-                        document.getElementById('lbl-team-name').innerText = teamName;
-                        initPitListeners(teamName);
-                        loadCircuitsRepository();
-                        return;
-                    }
-                }
-                // Fallback to /teams/{teamName} (supports multiple concurrent Crew Chief sessions)
-                db.ref('teams/' + teamName).once('value').then(snap2 => {
-                    const teamData = snap2.val();
-                    if (teamData && (teamData.pin === pin || teamData.pinHash === pin)) {
-                        activeTeamName = teamName;
-                        document.getElementById('login-section').classList.add('hidden');
-                        document.getElementById('dashboard-section').classList.remove('hidden');
-                        document.getElementById('team-info-badge').classList.remove('hidden');
-                        document.getElementById('lbl-team-name').innerText = teamName;
-                        initPitListeners(teamName);
-                        loadCircuitsRepository();
-                    } else {
-                        showLoginError('Error: Team not found or incorrect PIN.');
-                    }
-                }).catch(() => {
+            try {
+                const isValid = await verifyTeamCredentials(teamName, pin);
+                if (isValid) {
+                    activeTeamName = teamName;
+                    document.getElementById('login-section').classList.add('hidden');
+                    document.getElementById('dashboard-section').classList.remove('hidden');
+                    document.getElementById('team-info-badge').classList.remove('hidden');
+                    document.getElementById('lbl-team-name').innerText = teamName;
+                    initPitListeners(teamName);
+                    loadCircuitsRepository();
+                } else {
                     showLoginError('Error: Team not found or incorrect PIN.');
-                });
-            }).catch(err => {
+                }
+            } catch (err) {
                 console.error(err);
                 showLoginError('Network error connecting to Firebase. Check your connection.');
-            });
+            }
         });
 
         function initPitListeners(teamName) {
