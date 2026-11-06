@@ -55,6 +55,14 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 myPilotId = settings.deviceUid
             )
             startObserving(activeRoom)
+        } else {
+            viewModelScope.launch {
+                val globalRoom = settings.ensureRoom()
+                val globalPin = settings.pin
+                val pilotName = settings.driverName
+                val currentUid = try { FirebaseAuthManager.ensureAuthenticated() } catch (_: Exception) { "pilot-" + System.currentTimeMillis() }
+                joinTeam(globalRoom, globalPin, currentUid, pilotName)
+            }
         }
     }
 
@@ -114,17 +122,12 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 val myId = _uiState.value.myPilotId
                 if (_uiState.value.step == LobbyUiState.STEP_WAITING && myId.isNotBlank()) {
                     val myReq = pending[myId]
-                    if (myReq == null && pending.isNotEmpty() && _uiState.value.pendingPilots.containsKey(myId)) {
+                    val hadReq = _uiState.value.pendingPilots.containsKey(myId)
+                    if (myReq?.status == "REJECTED" || (hadReq && myReq == null)) {
                         settings.clearEnduranceSession()
                         _uiState.value = LobbyUiState(
                             step = LobbyUiState.STEP_SETUP,
                             error = "You have been removed from the team by the Crew Chief."
-                        )
-                    } else if (myReq?.status == "REJECTED") {
-                        settings.clearEnduranceSession()
-                        _uiState.value = LobbyUiState(
-                            step = LobbyUiState.STEP_SETUP,
-                            error = "Your access request has been rejected by the team."
                         )
                     } else if (myReq?.status == "ACCEPTED") {
                         _uiState.value = _uiState.value.copy(navigateToSession = "PILOT")

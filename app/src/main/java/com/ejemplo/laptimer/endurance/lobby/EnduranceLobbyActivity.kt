@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -58,7 +59,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
         }
         header.addView(back)
         val title = TextView(this).apply {
-            text = "Endurance Pilot Join"
+            text = "Endurance Cockpit Join"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
@@ -85,8 +86,12 @@ class EnduranceLobbyActivity : AppCompatActivity() {
     private fun observeViewModel() {
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
-                state.error?.let {
+                state.error?.let { err ->
+                    Toast.makeText(this@EnduranceLobbyActivity, err, Toast.LENGTH_LONG).show()
                     viewModel.consumeError()
+                    if (err.contains("removed", true) || err.contains("rejected", true)) {
+                        finish()
+                    }
                 }
 
                 if (state.step != currentStep) {
