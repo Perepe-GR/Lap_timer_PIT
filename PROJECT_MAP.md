@@ -1,4 +1,4 @@
-# PROJECT_MAP.md — LapTimer v2.2.0
+# PROJECT_MAP.md — LapTimer v2.3.0
 
 ## Architecture Overview
 The project follows a modular, single-responsibility architecture across clean subpackages:
@@ -10,7 +10,9 @@ The project follows a modular, single-responsibility architecture across clean s
 5. **Endurance Runtime & Sync (`endurance/`)** - Multi-device Endurance lobby flow, pilot session timing, leader dashboard, driver swap dialog, strategy editor, models, and unified Firebase RTDB sync under `/rooms/{roomCode}/`.
 6. **Editor (`editor/`)** - Circuit editing, gestures, gate rendering, toolbar, dialogs, and track saving.
 7. **Network, Hardware & Firebase (`net/`, `firebase/`, root)** - Network settings, USB auto-authorization, REST client, anonymous auth (`FirebaseAuthManager`), hash utilities, payload serialization, and `database.rules.json`.
-8. **UI Components (`ui/`, root)** - View setup, controller wiring, custom views (`TrackMapView`, `DeltaBarView`, `LineChartView`, `PageRenderView`).
+8. **Security & Validation (`util/`)** - Regex input validation for team names and numeric PINs (`ValidationUtils`), cryptographically secure salt generation and SHA-256 PIN hashing (`SecurityUtils`).
+9. **Web Pit Wall Dashboard (`pit-panel/`)** - Responsive HTML5/Tailwind CSS dashboard for the Crew Chief with real-time driver request management, tactical instructions, and circuit catalog.
+10. **UI Components (`ui/`, root)** - View setup, controller wiring, custom views (`TrackMapView`, `DeltaBarView`, `LineChartView`, `PageRenderView`).
 
 ## Key Modules by Subpackage
 
@@ -60,7 +62,7 @@ The project follows a modular, single-responsibility architecture across clean s
   - `RoleSelectFragment.kt` - Role selection ("Team Leader" vs "Driver/Pilot").
   - `CreateTeamFragment.kt` - Leader team creation, circuit selection, and numeric PIN default (`1234`, max 6 digits).
   - `JoinTeamFragment.kt` - Driver team join with team code and numeric PIN validation.
-  - `WaitingRoomFragment.kt` - Real-time connected drivers list, PIN display (Leader only), and "Start Session" button.
+  - `WaitingRoomFragment.kt` - Real-time connected drivers list, PIN display (Leader only), 30s timeout guard, and "Start Session" button.
   - `EnduranceLobbyViewModel.kt` - StateFlow-based ViewModel orchestrating lobby flow with anonymous auth.
 - **Pilot Runtime (`endurance/pilot/`)**:
   - `PilotSessionActivity.kt` - Driver timing UI, ON_TRACK/RESTING status cards, GPS loss & offline indicators, and unexpected movement alerts.
@@ -73,9 +75,8 @@ The project follows a modular, single-responsibility architecture across clean s
   - `StrategyEditorDialog.kt` - Modal dialog to configure and push stint strategy parameters.
 - **Sync & Data (`endurance/sync/`)**:
   - `EnduranceModels.kt` & `EnduranceModelMappers.kt` - TeamMeta (with pinHash, salt, leaderUid), MemberInfo, StrategyBase, SessionState, PilotInfo, LapRecord, Stint.
-  - `EnduranceSyncClient.kt` & `EnduranceRepository.kt` - REST client with `withContext(Dispatchers.IO)` and anonymous auth token injection (`?auth=<idToken>`).
+  - `EnduranceSyncClient.kt` & `EnduranceRepository.kt` - REST client with `withContext(Dispatchers.IO)` and anonymous auth token injection (`?auth=<idToken>`). Manages requests keyed by unique `deviceUid`.
   - `TelemetrySyncWorker.kt` - Background WorkManager worker for automatic offline telemetry queue syncing upon network reconnection.
-
 
 ### Editor (`editor/`)
 - `MapEditorActivity.kt` - Osmdroid map editor lifecycle and root layout.
@@ -87,10 +88,17 @@ The project follows a modular, single-responsibility architecture across clean s
 - `GateRenderer.kt` - Gate lines, arrows, markers, and handle overlays.
 - `TrackSaver.kt` - Circuit validation and `CircuitStore` persistence.
 
+### Security & Utilities (`util/`)
+- `ValidationUtils.kt` - Regex validation for team names (`^[a-zA-Z0-9 ]{6,15}$`) and numeric PINs (`^[0-9]{4,6}$`).
+- `SecurityUtils.kt` - Cryptographically secure salt generation (`SecureRandom`) and SHA-256 hash calculation and verification (`pinHash` and `salt`).
+
+### Web Pit Wall Dashboard (`pit-panel/`)
+- `index.html` - Tailwind CSS responsive web dashboard connecting to Firebase Realtime Database. Features Crew Chief authentication, `.info/connected` automatic reconnection, real-time driver request approval/rejection (`ACCEPTED`/`REJECTED`), live pit instruction transmission, and synchronized circuit catalog.
+
 ### Network, Hardware & Data Layer (`net/`, `firebase/`, root)
-- `LapTimerApplication.kt` - Main Application class ensuring early FirebaseApp initialization.
+- `LapTimerApplication.kt` - Main Application class ensuring early FirebaseApp initialization and offline disk persistence (`setPersistenceEnabled(true)`).
 - `FirebaseAuthManager.kt` - Prior anonymous Firebase Auth (`signInAnonymously()`) and ID token retrieval.
-- `HashUtils.kt` - SHA-256 with salt hashing for secure PIN verification.
+- `HashUtils.kt` - Legacy SHA-256 hashing utilities.
 - `HomeUiBuilder.kt` - Main menu with 4 primary entries: Solo / Endurance / Results / Settings.
 - `UsbSerialManager.kt` - Transparent USB auto-authorization by u-blox VID/PID.
 - `ReceptorConfig.kt` - Receptor model configuration (10Hz/25Hz/Auto).

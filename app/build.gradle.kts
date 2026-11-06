@@ -19,7 +19,7 @@ if (versionPropertiesFile.exists()) {
     major = versionProps.getProperty("VERSION_MAJOR", "2").toInt()
     minor = versionProps.getProperty("VERSION_MINOR", "3").toInt()
     buildNum = versionProps.getProperty("VERSION_BUILD", "0").toInt()
-    vCode = versionProps.getProperty("VERSION_CODE", "15").toInt()
+    vCode = versionProps.getProperty("VERSION_CODE", "70").toInt()
 } else {
     versionProps.setProperty("VERSION_MAJOR", major.toString())
     versionProps.setProperty("VERSION_MINOR", minor.toString())
@@ -37,7 +37,7 @@ if (isBuilding) {
     versionPropertiesFile.outputStream().use { versionProps.store(it, "Auto-incremented build number") }
 }
 
-val computedVersionName = "v$major.$minor.$buildNum"
+val computedVersionName = "2.3.0"
 
 android {
     namespace = "com.ejemplo.laptimer"

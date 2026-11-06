@@ -34,7 +34,7 @@ class RaceRecord(
 
     fun toJson(): JSONObject {
         val o = JSONObject()
-        o.put("version", "V2.2.0")
+        o.put("version", "V2.3.0")
         o.put("id", id)
         o.put("mode", mode)
         o.put("circuit", circuit)
@@ -48,7 +48,7 @@ class RaceRecord(
         val lapsObj = JSONObject()
         for (l in laps) {
             val lapObj = JSONObject()
-            lapObj.put("version", "V2.2.0")
+            lapObj.put("version", "V2.3.0")
             lapObj.put("n", l.n)
             lapObj.put("ms", l.ms)
             lapObj.put("k", l.kind)

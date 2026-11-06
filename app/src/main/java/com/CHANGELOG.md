@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-11-06
+
+### Added
+- Hybrid Android/Web architecture documentation and Pit Wall Web Dashboard (`pit-panel/index.html`) with Tailwind CSS and live Firebase listeners.
+- Strict team name (`^[a-zA-Z0-9 ]{6,15}$`) and numeric PIN (`^[0-9]{4,6}$`) validation with SHA-256 + salt security.
+- Driver request synchronization with unique `deviceUid` keys to eliminate concurrency conditions and race conditions.
+- Offline persistence configuration (`setPersistenceEnabled(true)`) and automatic background queue recovery.
+
+### Changed
+- Version updated to 2.3.0 (`versionCode = 70`, `versionName = "2.3.0"`).
+
 ## [2.1.0] - 2026-03-06
 
 ### Added

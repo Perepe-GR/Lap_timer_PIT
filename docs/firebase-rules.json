@@ -1,15 +1,66 @@
 {
   "rules": {
-    "rooms": {
-      "$room": {
-        ".read": "$room.length >= 10",
-        ".write": "$room.length >= 10",
-        "msgs": {
-          "$id": {
-            ".validate": "newData.hasChildren(['text', 'ts']) && newData.child('text').isString() && newData.child('text').val().length <= 120"
+    "teams": {
+      "$teamCode": {
+        ".read": "auth != null && root.child('teams').child($teamCode).child('members').child(auth.uid).exists()",
+        "meta":     { ".write": "auth != null && !data.exists()" },
+        "members":  { "$uid": { ".write": "auth != null && (auth.uid == $uid || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid)" } },
+        "strategy": {
+          ".write": "auth != null && root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid"
+        },
+        "session":  { ".write": "auth != null && root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid" },
+        "pilots":   {
+          "$pilotId": {
+            ".write": "auth != null && (auth.uid == $pilotId || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid)"
           }
         }
       }
+    },
+    "rooms": {
+      "$roomCode": {
+        ".read": "auth != null",
+        "meta": {
+          ".write": "auth != null && (!data.exists() || data.child('leaderUid').val() == auth.uid)"
+        },
+        "members": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid == $uid || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
+          }
+        },
+        "requests": {
+          "$deviceUid": {
+            ".write": "auth != null && (auth.uid == $deviceUid || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)",
+            ".validate": "newData.hasChildren(['id', 'name', 'uid', 'status']) && newData.child('uid').val() == $deviceUid"
+          }
+        },
+        "pending": {
+          "$deviceUid": {
+            ".write": "auth != null && (auth.uid == $deviceUid || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
+          }
+        },
+        "instructions": {
+          ".write": "auth != null && root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid"
+        },
+        "live": {
+          "$carId": {
+            ".write": "auth != null"
+          }
+        },
+        "laps": {
+          "$carId": {
+            ".write": "auth != null"
+          }
+        },
+        "pilots": {
+          "$pilotId": {
+            ".write": "auth != null && (auth.uid == $pilotId || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
+          }
+        }
+      }
+    },
+    "circuits": {
+      ".read": "true",
+      ".write": "auth != null"
     }
   }
 }
