@@ -25,6 +25,7 @@ class CircuitsActivity : PageActivity() {
     override fun build() {
         store = CircuitStore(this)
         statsStore = StatsStore(this)
+        store.syncFromFirebase()
         val active = store.loadActive()
 
         val c0 = card("Active Circuit")

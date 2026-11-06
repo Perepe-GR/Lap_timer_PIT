@@ -1,17 +1,14 @@
 package com.ejemplo.laptimer
 
-import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 
-/** Ancho por defecto (m) de cada lado de una línea de paso, medido desde el punto marcado. */
+/** Default half width (m) for a crossing line measured from center point. */
 const val DEFAULT_HALF_WIDTH_M = 15.0
 
 /**
- * Punto de paso (meta, sector o boxes) con el rumbo de marcha en ese punto.
- * La línea es perpendicular al rumbo y se extiende leftM metros a la izquierda y rightM a la derecha
- * del punto (mirando en el sentido de marcha).
+ * Crossing gate point (finish, sector or pit lane) with heading direction.
+ * Line is perpendicular to heading and extends leftM to left and rightM to right.
  */
 data class GatePoint(
     val lat: Double,
@@ -21,13 +18,11 @@ data class GatePoint(
     val rightM: Double = DEFAULT_HALF_WIDTH_M
 )
 
-/** Vértice de la zona PADDOCK (data class para que la igualdad entre circuitos funcione). */
+/** Vertex coordinates of PADDOCK polygon area. */
 data class LatLon(val lat: Double, val lon: Double)
 
 /**
- * Un circuito: meta + puntos de sector, y opcionalmente el carril de PIT (línea de entrada y de salida) y una
- * zona PADDOCK (polígono, por si los boxes se quedan pequeños y desvían al paddock).
- * n puntos de sector = n + 1 sectores (el último termina en la meta).
+ * Circuit model: finish gate + sector points, optional pit lane and paddock area polygon.
  */
 data class Circuit(
     val name: String,
@@ -37,10 +32,10 @@ data class Circuit(
     val pitOut: GatePoint? = null,
     val paddock: List<LatLon> = emptyList()
 ) {
-    /** Hay zona PADDOCK definida (mínimo 3 vértices). */
+    /** True if paddock area is defined (minimum 3 vertices). */
     val hasPaddock: Boolean get() = paddock.size >= 3
 
-    /** true si (lat, lon) está dentro de la zona PADDOCK (polígono pequeño: basta con grados). */
+    /** Returns true if (lat, lon) is inside paddock polygon. */
     fun inPaddock(lat: Double, lon: Double): Boolean {
         if (!hasPaddock) return false
         var inside = false
@@ -58,14 +53,10 @@ data class Circuit(
 
     val sectorCount: Int get() = sectors.size + 1
 
-    /** Hay carril de boxes definido (necesita entrada y salida). */
+    /** True if pit lane is defined (needs both pitIn and pitOut). */
     val hasPitLane: Boolean get() = pitIn != null && pitOut != null
 
-    /**
-     * Firma de la geometría de meta y sectores (sin anchos ni boxes): sirve para saber si las marcas
-     * guardadas siguen valiendo. Es la misma que en la v0.7, así que cambiar el ancho de una línea
-     * o añadir boxes NO borra los récords.
-     */
+    /** Geometry signature for finish and sectors. */
     fun signature(): String = legacyJson().hashCode().toString()
 
     private fun legacyJson(): String {
@@ -135,99 +126,5 @@ data class Circuit(
             }
             return Circuit(o.getString("nombre"), pointFromJson(o.getJSONObject("meta")), list, pin, pout, pad)
         }
-    }
-}
-
-/** Guarda los circuitos como archivos JSON en el almacenamiento privado de la app y sincroniza con Firebase /circuits. */
-class CircuitStore(private val context: Context) {
-    private val dir = File(context.filesDir, "circuits").apply { mkdirs() }
-    private val prefs = context.getSharedPreferences("laptimer", Context.MODE_PRIVATE)
-
-    private fun fileFor(name: String) =
-        File(dir, name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".json")
-
-    fun save(c: Circuit) {
-        fileFor(c.name).writeText(c.toJson())
-        syncCircuitToFirebase(context, c)
-    }
-
-    private fun syncCircuitToFirebase(context: Context, c: Circuit) {
-        val settings = NetSettings(context)
-        val dbUrl = settings.dbUrl.ifBlank { "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app" }
-        val circuitKey = c.name.lowercase().replace(Regex("[^a-z0-9]"), "_")
-        val payload = JSONObject().apply {
-            put("name", c.name)
-            put("signature", c.signature())
-            put("sectorCount", c.sectorCount)
-            put("geojson", c.toJson())
-            put("updatedAt", System.currentTimeMillis())
-        }.toString()
-
-        Thread {
-            try {
-                val token = kotlinx.coroutines.runBlocking {
-                    try { com.ejemplo.laptimer.firebase.FirebaseAuthManager.getIdToken() } catch (_: Exception) { null }
-                }
-                val cleanDb = dbUrl.trimEnd('/')
-                val authQuery = if (!token.isNullOrBlank()) "?auth=$token" else ""
-                val url = java.net.URL("$cleanDb/circuits/$circuitKey.json$authQuery")
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.requestMethod = "PUT"
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                conn.responseCode
-                conn.disconnect()
-            } catch (_: Exception) {
-                // ignore offline network failures gracefully
-            }
-        }.start()
-    }
-
-    fun delete(name: String) {
-        fileFor(name).delete()
-    }
-
-    fun list(): List<Circuit> {
-        val files = dir.listFiles() ?: return emptyList()
-        return files
-            .filter { it.extension == "json" }
-            .mapNotNull { f -> runCatching { Circuit.fromJson(f.readText()) }.getOrNull() }
-            .sortedBy { it.name.lowercase() }
-    }
-
-    /** Circuito guardado más cercano a (lat, lon) dentro de maxM metros, o null. */
-    fun nearest(lat: Double, lon: Double, maxM: Double): Circuit? {
-        var best: Circuit? = null
-        var bestD = maxM
-        for (c in list()) {
-            val d = distanceM(lat, lon, c.finish.lat, c.finish.lon)
-            if (d < bestD) {
-                bestD = d
-                best = c
-            }
-        }
-        return best
-    }
-
-    fun saveLastPosition(lat: Double, lon: Double) {
-        prefs.edit().putString("lastLat", lat.toString()).putString("lastLon", lon.toString()).apply()
-    }
-
-    fun lastPosition(): Pair<Double, Double>? {
-        val a = prefs.getString("lastLat", null)?.toDoubleOrNull() ?: return null
-        val b = prefs.getString("lastLon", null)?.toDoubleOrNull() ?: return null
-        return Pair(a, b)
-    }
-
-    var activeName: String?
-        get() = prefs.getString("activo", null)
-        set(value) {
-            prefs.edit().putString("activo", value).apply()
-        }
-
-    fun loadActive(): Circuit? {
-        val n = activeName ?: return null
-        return list().firstOrNull { it.name == n }
     }
 }

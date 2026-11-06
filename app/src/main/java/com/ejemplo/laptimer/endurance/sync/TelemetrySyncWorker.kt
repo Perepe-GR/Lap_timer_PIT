@@ -4,10 +4,11 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.ejemplo.laptimer.CircuitStore
 
 /**
  * Background WorkManager Worker to automatically flush local offline telemetry & lap queues
- * upon network reconnection without blocking the main UI thread.
+ * and sync global public circuits from /circuits upon network reconnection.
  */
 class TelemetrySyncWorker(
     appContext: Context,
@@ -19,9 +20,16 @@ class TelemetrySyncWorker(
     }
 
     override suspend fun doWork(): Result {
-        Log.i(TAG, "Starting offline telemetry queue sync work...")
+        Log.i(TAG, "Starting offline telemetry queue & global circuit repository sync...")
         val code = inputData.getString("teamCode") ?: ""
         val pilotId = inputData.getString("pilotId") ?: ""
+
+        // Sync global public circuits from /circuits
+        try {
+            CircuitStore(applicationContext).syncFromFirebase()
+        } catch (e: Exception) {
+            Log.w(TAG, "Circuit sync error: ${e.message}")
+        }
 
         val repo = EnduranceRepository(applicationContext)
         return try {
