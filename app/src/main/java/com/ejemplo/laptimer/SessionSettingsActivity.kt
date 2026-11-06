@@ -25,20 +25,30 @@ class SessionSettingsActivity : PageActivity() {
         val settings = viewModel.settings
         val currentUiState = viewModel.uiState.value
 
-        val cPit = card("Telemetry & Pit Crew")
-        val swEnabled = check(cPit, "Enable telemetry with Pit Wall", currentUiState.enabled)
-
+        val cDriverTeam = card("Driver & Team Configuration")
         val etTeamName = textField(
-            cPit, "Team / Session Name (6-15 chars, alphanumeric)",
-            currentUiState.teamName, "Ej. TORQUE TEAM",
+            cDriverTeam, "Team Session Name (Firebase room: /rooms/{teamName})",
+            currentUiState.teamName, "e.g. TORQUE TEAM",
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
         )
         val etPin = textField(
-            cPit, "Access PIN (4-6 digits)",
+            cDriverTeam, "PIN Access Code (Security credential)",
             currentUiState.pin, "••••",
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         )
+        val etCarName = textField(
+            cDriverTeam, "Car Name / Number (Telemetry identifier)",
+            settings.carName, "Car 1",
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        )
+        val etDriverName = textField(
+            cDriverTeam, "Driver Name (Active driver / Roster)",
+            settings.driverName, "Driver 1",
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        )
 
+        val cPit = card("Telemetry & Pit Crew")
+        val swEnabled = check(cPit, "Enable telemetry with Pit Wall", currentUiState.enabled)
         val etInt = numField(cPit, "Telemetry Interval (seconds; min 10)", currentUiState.intervalS.toString())
 
         addButton(cPit, button("SHARE TELEMETRY LINK") {
@@ -114,6 +124,8 @@ class SessionSettingsActivity : PageActivity() {
 
                 viewModel.validateAndSave(
                     onSuccess = {
+                        settings.carName = etCarName.text.toString().trim()
+                        settings.driverName = etDriverName.text.toString().trim()
                         settings.lockKmh = etLock.text.toString().toIntOrNull() ?: 10
                         settings.rangePct = etRange.text.toString().toFloatOrNull() ?: 2f
                         settings.lapSummarySec = etSum.text.toString().toIntOrNull() ?: 4

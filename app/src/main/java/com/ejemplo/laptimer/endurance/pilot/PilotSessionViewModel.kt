@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class PilotUiState(
-    val status: String = "READY", // ON_TRACK, RESTING, READY
+    val status: String = "READY",
     val isCurrentPilot: Boolean = false,
     val currentLapMs: Long = 0L,
     val bestLapMs: Long? = null,
@@ -21,7 +21,8 @@ data class PilotUiState(
     val syncStatus: String = "Online",
     val unexpectedMovement: Boolean = false,
     val estimatedStintMinutes: Int = 30,
-    val tacticalInstruction: EnduranceSyncClient.TacticalInstruction? = null
+    val tacticalInstruction: EnduranceSyncClient.TacticalInstruction? = null,
+    val ejected: Boolean = false
 )
 
 class PilotSessionViewModel(application: Application) : AndroidViewModel(application) {
@@ -42,10 +43,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
                 syncClient.observeSessionState(teamCode).collect { state ->
                     val isCur = state.currentPilotId == myPilotId
                     val newStatus = if (isCur) "ON_TRACK" else "RESTING"
-                    _uiState.value = _uiState.value.copy(
-                        isCurrentPilot = isCur,
-                        status = newStatus
-                    )
+                    _uiState.value = _uiState.value.copy(isCurrentPilot = isCur, status = newStatus)
                 }
             }
             launch {
@@ -61,6 +59,24 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
                     _uiState.value = _uiState.value.copy(tacticalInstruction = instr)
                 }
             }
+            launch {
+                syncClient.observePendingPilots(teamCode).collect { pending ->
+                    val req = pending[myPilotId]
+                    val hadReq = pending.isNotEmpty()
+                    if ((req == null && hadReq) || req?.status == "REJECTED") {
+                        settings.clearEnduranceSession()
+                        _uiState.value = _uiState.value.copy(ejected = true)
+                    }
+                }
+            }
+        }
+    }
+
+    fun leaveSession(teamCode: String, myPilotId: String, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            runCatching { syncClient.removePilotPresence(teamCode, myPilotId) }
+            settings.clearEnduranceSession()
+            onComplete()
         }
     }
 
@@ -88,10 +104,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
     fun onLapCompleted(teamCode: String, myPilotId: String, lap: LapRecord) {
         val updatedLaps = _uiState.value.laps + lap
         val best = updatedLaps.filter { it.valid }.minOfOrNull { it.timeMs }
-        _uiState.value = _uiState.value.copy(
-            laps = updatedLaps,
-            bestLapMs = best
-        )
+        _uiState.value = _uiState.value.copy(laps = updatedLaps, bestLapMs = best)
         viewModelScope.launch {
             syncClient.pushLap(teamCode, myPilotId, lap)
         }

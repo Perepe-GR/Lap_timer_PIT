@@ -82,7 +82,6 @@ class EnduranceSyncClient(
             val jsonPayload = JSONObject(newMeta.toMap()).toString()
             request("PUT", "rooms/$cleanCode/meta", jsonPayload)
 
-            // Dual-Write Authentication: Simultaneously write security metadata to /teams/{cleanCode}
             val teamPayload = JSONObject().apply {
                 put("name", newMeta.name)
                 put("pinHash", newMeta.pinHash)
@@ -140,6 +139,13 @@ class EnduranceSyncClient(
         val json = JSONObject(pending.toMap()).toString()
         request("PUT", "rooms/$code/requests/$deviceUid", json)
         request("PUT", "rooms/$code/pending/$deviceUid", json)
+    }
+
+    suspend fun removePilotPresence(code: String, uid: String): Result<Unit> = runCatching {
+        request("PUT", "rooms/$code/requests/$uid", "null")
+        request("PUT", "rooms/$code/pending/$uid", "null")
+        request("PUT", "rooms/$code/members/$uid", "null")
+        request("PUT", "rooms/$code/pilots/$uid", "null")
     }
 
     suspend fun joinTeam(code: String, inputPin: String, pilotId: String, pilotName: String): Result<TeamMeta> = runCatching {
