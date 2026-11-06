@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -27,14 +26,7 @@ import java.net.URLEncoder
 
 class WaitingRoomFragment : Fragment() {
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    private fun roundBg(color: Int, radiusDp: Int): GradientDrawable {
-        val g = GradientDrawable()
-        g.setColor(color)
-        g.cornerRadius = dp(radiusDp).toFloat()
-        return g
-    }
+    private fun dp(v: Int): Int = (v * requireContext().resources.displayMetrics.density).toInt()
 
     private lateinit var txtInfo: TextView
     private lateinit var txtPin: TextView
@@ -51,44 +43,43 @@ class WaitingRoomFragment : Fragment() {
     private var timerJob: Job? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val root = LinearLayout(requireContext())
-        root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(Color.parseColor("#0B0D10"))
-        root.setPadding(dp(20), dp(16), dp(20), dp(16))
+        val root = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#0B0D10"))
+            setPadding(dp(20), dp(16), dp(20), dp(16))
+        }
 
-        txtInfo = TextView(requireContext())
-        txtInfo.textSize = 20f
-        txtInfo.typeface = Typeface.DEFAULT_BOLD
-        txtInfo.setTextColor(Color.WHITE)
+        txtInfo = TextView(requireContext()).apply {
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+        }
         root.addView(txtInfo)
 
-        txtPin = TextView(requireContext())
-        txtPin.textSize = 26f
-        txtPin.typeface = Typeface.DEFAULT_BOLD
-        txtPin.setTextColor(Color.parseColor("#C6F432"))
-        txtPin.setPadding(0, dp(6), 0, dp(12))
+        txtPin = TextView(requireContext()).apply {
+            textSize = 24f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#C6F432"))
+            setPadding(0, dp(4), 0, dp(10))
+        }
         root.addView(txtPin)
 
-        // Leader Pit-Wall Management Link Actions
         btnCopyLink = TextView(requireContext()).apply {
             text = "COPY PIT-WALL LINK"
             gravity = Gravity.CENTER
             textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
-            background = roundBg(Color.parseColor("#12161B"), 10)
+            background = roundBg(Color.parseColor("#12161B"), 10, requireContext())
             setPadding(0, dp(10), 0, dp(10))
             visibility = View.GONE
             setOnClickListener {
                 val url = getPitWallUrl()
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Pit-Wall Link", url)
-                clipboard.setPrimaryClip(clip)
+                clipboard.setPrimaryClip(ClipData.newPlainText("Pit-Wall Link", url))
             }
         }
-        val lpCopy = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        lpCopy.bottomMargin = dp(8)
-        root.addView(btnCopyLink, lpCopy)
+        root.addView(btnCopyLink, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) })
 
         btnShareLink = TextView(requireContext()).apply {
             text = "SHARE PIT-WALL LINK"
@@ -96,7 +87,7 @@ class WaitingRoomFragment : Fragment() {
             textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
-            background = roundBg(Color.parseColor("#12161B"), 10)
+            background = roundBg(Color.parseColor("#12161B"), 10, requireContext())
             setPadding(0, dp(10), 0, dp(10))
             visibility = View.GONE
             setOnClickListener {
@@ -108,9 +99,7 @@ class WaitingRoomFragment : Fragment() {
                 startActivity(Intent.createChooser(i, "Share Pit-Wall Link"))
             }
         }
-        val lpShare = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        lpShare.bottomMargin = dp(12)
-        root.addView(btnShareLink, lpShare)
+        root.addView(btnShareLink, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) })
 
         lblPending = TextView(requireContext()).apply {
             text = "Pending Admission Requests:"
@@ -136,47 +125,39 @@ class WaitingRoomFragment : Fragment() {
         root.addView(txtTimeout)
 
         btnRetry = TextView(requireContext()).apply {
-            text = "Reintentar verificación de estado"
+            text = "Retry Status Verification"
             gravity = Gravity.CENTER
             textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#0B0D10"))
-            background = roundBg(Color.parseColor("#C6F432"), 10)
+            background = roundBg(Color.parseColor("#C6F432"), 10, requireContext())
             setPadding(0, dp(12), 0, dp(12))
             visibility = View.GONE
-            setOnClickListener {
-                resetTimeout()
-            }
+            setOnClickListener { resetTimeout() }
         }
-        val lpRetry = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        lpRetry.bottomMargin = dp(12)
-        root.addView(btnRetry, lpRetry)
+        root.addView(btnRetry, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) })
 
-        val lbl = TextView(requireContext())
-        lbl.text = "Connected Drivers / Pilots:"
-        lbl.textSize = 14f
-        lbl.setTextColor(Color.parseColor("#9AA3AE"))
-        val lpLbl = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        lpLbl.topMargin = dp(12)
-        root.addView(lbl, lpLbl)
+        val lbl = TextView(requireContext()).apply {
+            text = "Connected Drivers / Pilots:"
+            textSize = 14f
+            setTextColor(Color.parseColor("#9AA3AE"))
+        }
+        root.addView(lbl, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
 
         pilotList = ListView(requireContext())
         root.addView(pilotList, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        btnStart = TextView(requireContext())
-        btnStart.text = "START ENDURANCE SESSION"
-        btnStart.gravity = Gravity.CENTER
-        btnStart.textSize = 16f
-        btnStart.typeface = Typeface.DEFAULT_BOLD
-        btnStart.setTextColor(Color.parseColor("#0B0D10"))
-        btnStart.background = roundBg(Color.parseColor("#C6F432"), 14)
-        btnStart.visibility = View.GONE
-        btnStart.setOnClickListener {
-            (activity as? EnduranceLobbyActivity)?.viewModel?.startSession()
+        btnStart = TextView(requireContext()).apply {
+            text = "START ENDURANCE SESSION"
+            gravity = Gravity.CENTER
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#0B0D10"))
+            background = roundBg(Color.parseColor("#C6F432"), 14, requireContext())
+            visibility = View.GONE
+            setOnClickListener { (activity as? EnduranceLobbyActivity)?.viewModel?.startSession() }
         }
-        val lpBtn = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))
-        lpBtn.topMargin = dp(16)
-        root.addView(btnStart, lpBtn)
+        root.addView(btnStart, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)).apply { topMargin = dp(16) })
 
         observeState()
         startTimeoutTimer()
@@ -225,7 +206,12 @@ class WaitingRoomFragment : Fragment() {
         val vm = (activity as? EnduranceLobbyActivity)?.viewModel ?: return
         viewLifecycleOwner.lifecycleScope.launch {
             vm.uiState.collectLatest { state ->
-                txtInfo.text = "Team: ${state.teamName} (${state.teamCode}) · Circuit: ${state.circuitId}"
+                // 1. Text Cleanup in Endurance Lobby: avoid duplication and handle circuit gracefully
+                val tName = state.teamName.ifBlank { state.teamCode }
+                val teamDisplay = if (tName.equals(state.teamCode, true)) tName else "$tName (${state.teamCode})"
+                val circuitDisplay = state.circuitId.ifBlank { "Default Circuit" }
+                txtInfo.text = "Team: $teamDisplay · Circuit: $circuitDisplay"
+
                 val isChief = state.role == "CREW_CHIEF" || state.role == "LEADER"
                 if (isChief) {
                     txtPin.text = "PIN: ${state.pin}"
@@ -241,63 +227,8 @@ class WaitingRoomFragment : Fragment() {
                         pendingContainer.visibility = View.VISIBLE
                         pendingContainer.removeAllViews()
                         for ((pId, p) in state.pendingPilots) {
-                            val row = LinearLayout(requireContext()).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = Gravity.CENTER_VERTICAL
-                                background = roundBg(Color.parseColor("#12161B"), 10)
-                                setPadding(dp(12), dp(8), dp(12), dp(8))
-                            }
-                            val tvName = LinearLayout(requireContext()).apply {
-                                orientation = LinearLayout.VERTICAL
-                            }
-                            val tvTitle = TextView(requireContext()).apply {
-                                text = p.name
-                                textSize = 16f
-                                setTextColor(Color.WHITE)
-                            }
-                            val tvStatus = TextView(requireContext()).apply {
-                                text = "Status: ${p.status}"
-                                textSize = 12f
-                                setTextColor(Color.parseColor("#9AA3AE"))
-                            }
-                            tvName.addView(tvTitle)
-                            tvName.addView(tvStatus)
-                            row.addView(tvName, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-
-                            val btnAccept = TextView(requireContext()).apply {
-                                text = "ACCEPT"
-                                gravity = Gravity.CENTER
-                                textSize = 14f
-                                typeface = Typeface.DEFAULT_BOLD
-                                setTextColor(Color.parseColor("#0B0D10"))
-                                background = roundBg(Color.parseColor("#C6F432"), 8)
-                                setPadding(dp(12), dp(8), dp(12), dp(8))
-                                setOnClickListener {
-                                    vm.acceptPilot(state.teamCode, pId, p.name, p.uid)
-                                }
-                            }
-                            row.addView(btnAccept)
-
-                            val btnReject = TextView(requireContext()).apply {
-                                text = "REJECT"
-                                gravity = Gravity.CENTER
-                                textSize = 14f
-                                typeface = Typeface.DEFAULT_BOLD
-                                setTextColor(Color.WHITE)
-                                background = roundBg(Color.parseColor("#EF4444"), 8)
-                                setPadding(dp(12), dp(8), dp(12), dp(8))
-                                val lpReject = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                                lpReject.leftMargin = dp(8)
-                                layoutParams = lpReject
-                                setOnClickListener {
-                                    vm.rejectPilot(state.teamCode, p.uid.ifBlank { pId })
-                                }
-                            }
-                            row.addView(btnReject)
-
-                            val lpRow = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                            lpRow.bottomMargin = dp(6)
-                            pendingContainer.addView(row, lpRow)
+                            val row = createPendingRow(requireContext(), pId, p, state.teamCode, vm)
+                            pendingContainer.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(6) })
                         }
                     } else {
                         lblPending.visibility = View.GONE
@@ -313,8 +244,12 @@ class WaitingRoomFragment : Fragment() {
                     txtTimeout.visibility = View.VISIBLE
                 }
 
+                // 3. Name & Status Synchronization in Connected Drivers
                 val lines = state.pilots.values.map { p ->
-                    "${p.info.name}  ·  Status: ${p.info.status}"
+                    val pilotName = p.info.name.ifBlank { "Pilot" }
+                    val isDriving = state.currentPilotId == p.info.id || state.currentPilotId == p.info.name
+                    val statusText = if (isDriving) "DRIVING" else p.info.status.ifBlank { "READY" }
+                    "$pilotName (ID: ${p.info.id})  ·  Status: $statusText"
                 }
                 if (lines.isEmpty() && !isChief) {
                     pilotList.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, listOf("Waiting for Crew Chief approval..."))

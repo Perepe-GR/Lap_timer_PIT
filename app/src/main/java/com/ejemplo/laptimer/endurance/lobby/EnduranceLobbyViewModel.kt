@@ -22,6 +22,7 @@ data class LobbyUiState(
     val teamName: String = "",
     val circuitId: String = "",
     val myPilotId: String = "",
+    val currentPilotId: String = "",
     val pilots: Map<String, PilotData> = emptyMap(),
     val pendingPilots: Map<String, PendingPilot> = emptyMap(),
     val sessionState: String = "LOBBY",
@@ -91,7 +92,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 settings.saveEnduranceSession(cleanCode, "CREW_CHIEF", currentUid)
                 _uiState.value = _uiState.value.copy(
                     teamCode = cleanCode, teamName = teamName, circuitId = circuitId, pin = pin,
-                    step = LobbyUiState.STEP_WAITING, error = null
+                    step = LobbyUiState.STEP_WAITING, error = null, myPilotId = currentUid
                 )
                 startObserving(cleanCode)
             } else {
@@ -125,7 +126,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 settings.saveEnduranceSession(cleanCode, "PILOT", uid)
                 _uiState.value = _uiState.value.copy(
                     teamCode = cleanCode, teamName = meta.name, circuitId = meta.circuitId,
-                    myPilotId = pilotId, pin = inputPin.trim(), step = LobbyUiState.STEP_WAITING, error = null
+                    myPilotId = uid, pin = inputPin.trim(), step = LobbyUiState.STEP_WAITING, error = null
                 )
                 startObserving(cleanCode)
             } else {
@@ -169,15 +170,27 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
             }
         }
         viewModelScope.launch {
+            syncClient.observeCurrentPilotId(code).collect { curId ->
+                _uiState.value = _uiState.value.copy(currentPilotId = curId)
+            }
+        }
+        viewModelScope.launch {
             syncClient.observePendingPilots(code).collect { pending ->
                 _uiState.value = _uiState.value.copy(pendingPilots = pending)
                 val myId = _uiState.value.myPilotId
                 if (_uiState.value.role == "PILOT" && _uiState.value.step == LobbyUiState.STEP_WAITING && myId.isNotBlank()) {
                     val myReq = pending[myId]
-                    if (myReq?.status == "REJECTED") {
+                    // Automatic Ejection Protocol: if removed (null after having been present or rejected)
+                    if (myReq == null && pending.isNotEmpty() && _uiState.value.pendingPilots.containsKey(myId)) {
                         settings.clearEnduranceSession()
-                        _uiState.value = _uiState.value.copy(
-                            step = LobbyUiState.STEP_SETUP, pin = "",
+                        _uiState.value = LobbyUiState(
+                            step = LobbyUiState.STEP_ROLE_SELECT,
+                            error = "You have been removed from the team by the Crew Chief."
+                        )
+                    } else if (myReq?.status == "REJECTED") {
+                        settings.clearEnduranceSession()
+                        _uiState.value = LobbyUiState(
+                            step = LobbyUiState.STEP_ROLE_SELECT,
                             error = "Your access request has been rejected by the team."
                         )
                     } else if (myReq?.status == "ACCEPTED") {

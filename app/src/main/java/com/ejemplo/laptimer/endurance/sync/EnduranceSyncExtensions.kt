@@ -98,6 +98,21 @@ fun EnduranceSyncClient.observeSessionState(code: String): Flow<SessionState> = 
     }
 }
 
+fun EnduranceSyncClient.observeCurrentPilotId(code: String): Flow<String> = flow {
+    while (true) {
+        runCatching {
+            val res = request("GET", "rooms/$code/session/currentPilotId")
+            if (res.isNotBlank() && res != "null") {
+                val cleaned = res.trim().removeSurrounding("\"")
+                emit(cleaned)
+            } else {
+                emit("")
+            }
+        }
+        delay(3000L)
+    }
+}
+
 suspend fun EnduranceSyncClient.acceptPilot(code: String, pilotId: String, pilotName: String, uid: String): Result<Unit> = runCatching {
     val info = PilotInfo(pilotId, pilotName, "READY", System.currentTimeMillis())
     request("PUT", "rooms/$code/pilots/$pilotId/info", JSONObject(info.toMap()).toString())
