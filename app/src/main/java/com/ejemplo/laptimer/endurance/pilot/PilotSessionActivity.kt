@@ -12,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.ejemplo.laptimer.NetSettings
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -133,12 +134,12 @@ class PilotSessionActivity : AppCompatActivity() {
         rootLayout.addView(txtGpsStatus)
 
         val btnExit = TextView(this).apply {
-            text = "EXIT SESSION"
+            text = "FINISH SESSION"
             gravity = Gravity.CENTER
             textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
-            setBackgroundColor(Color.parseColor("#12161B"))
+            setBackgroundColor(Color.parseColor("#EF4444"))
             setPadding(0, dp(14), 0, dp(14))
             setOnClickListener { confirmExit() }
         }
@@ -199,9 +200,12 @@ class PilotSessionActivity : AppCompatActivity() {
 
     private fun confirmExit() {
         AlertDialog.Builder(this)
-            .setTitle("Exit Session")
-            .setMessage("Are you sure you want to exit this endurance session?")
-            .setPositiveButton("Exit") { _, _ -> finish() }
+            .setTitle("Finish Session")
+            .setMessage("Are you sure you want to finish and exit this endurance session?")
+            .setPositiveButton("Finish Session") { _, _ ->
+                NetSettings(this).clearEnduranceSession()
+                finish()
+            }
             .setNegativeButton("Cancel", null)
             .show()
     }

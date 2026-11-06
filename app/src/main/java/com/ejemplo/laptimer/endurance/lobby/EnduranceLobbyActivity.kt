@@ -9,11 +9,11 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.ejemplo.laptimer.NetSettings
 import com.ejemplo.laptimer.endurance.leader.LeaderDashboardActivity
 import com.ejemplo.laptimer.endurance.pilot.PilotSessionActivity
 import kotlinx.coroutines.flow.collectLatest
@@ -29,6 +29,19 @@ class EnduranceLobbyActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val settings = NetSettings(this)
+        if (settings.sessionActive && settings.activeRoomCode.isNotBlank()) {
+            val intent = if (settings.userRole == "CREW_CHIEF") {
+                Intent(this, LeaderDashboardActivity::class.java)
+            } else {
+                Intent(this, PilotSessionActivity::class.java)
+            }
+            intent.putExtra("teamCode", settings.activeRoomCode)
+            startActivity(intent)
+            finish()
+            return
+        }
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

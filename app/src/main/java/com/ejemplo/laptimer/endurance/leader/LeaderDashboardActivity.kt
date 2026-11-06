@@ -13,7 +13,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.snackbar.Snackbar
+import com.ejemplo.laptimer.NetSettings
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -178,6 +178,7 @@ class LeaderDashboardActivity : AppCompatActivity() {
             .setTitle("Finish Endurance Session")
             .setMessage("Are you sure you want to finish the endurance session for the entire team?")
             .setPositiveButton("Finish Session") { _, _ ->
+                NetSettings(this).clearEnduranceSession()
                 viewModel.finishSession(teamCode)
                 finish()
             }
