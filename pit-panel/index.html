@@ -49,7 +49,73 @@
             </form>
         </section>
         <section id="dashboard-section" class="hidden space-y-6">
+            <!-- Row 1: Tactical Dispatch & Pending Requests -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Tactical Instruction Panel -->
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-between space-y-4">
+                    <div>
+                        <h3 class="text-base font-bold mb-3 text-emerald-400 flex items-center gap-2">
+                            <span>📢 Send Track Instruction</span>
+                        </h3>
+                        <form id="instruction-form" class="space-y-3">
+                            <div class="flex gap-2">
+                                <input type="text" id="instruction-input" placeholder="e.g. Enter this lap / Save battery"
+                                       class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+                                    Transmit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Quick Tactical Shortcuts -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Quick Tactical Commands</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" onclick="sendQuickCommand('BOX THIS LAP', 'amarillo')"
+                                    class="bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-300 font-mono font-bold text-xs py-2 px-3 rounded-lg transition-all text-center">
+                                [ BOX ]
+                            </button>
+                            <button type="button" onclick="sendQuickCommand('PUSH NOW', 'verde')"
+                                    class="bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 font-mono font-bold text-xs py-2 px-3 rounded-lg transition-all text-center">
+                                [ PUSH ]
+                            </button>
+                            <button type="button" onclick="sendQuickCommand('MAX ATTACK', 'rojo')"
+                                    class="bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 text-red-300 font-mono font-bold text-xs py-2 px-3 rounded-lg transition-all text-center">
+                                [ MAX ATTACK ]
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- FIA Flag Signals -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">FIA Flag Signals</label>
+                        <div class="grid grid-cols-5 gap-1.5">
+                            <button type="button" onclick="sendFlag('GREEN', 'GREEN FLAG - TRACK CLEAR', 'verde')"
+                                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-1 rounded-lg transition-all text-center shadow">
+                                🟢 GREEN
+                            </button>
+                            <button type="button" onclick="sendFlag('YELLOW', 'YELLOW FLAG - HAZARD AHEAD', 'amarillo')"
+                                    class="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold text-xs py-2 px-1 rounded-lg transition-all text-center shadow">
+                                🟡 YELLOW
+                            </button>
+                            <button type="button" onclick="sendFlag('BLUE', 'BLUE FLAG - YIELD TO FASTER CAR', 'azul')"
+                                    class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2 px-1 rounded-lg transition-all text-center shadow">
+                                🔵 BLUE
+                            </button>
+                            <button type="button" onclick="sendFlag('RED', 'RED FLAG - SESSION STOPPED', 'rojo')"
+                                    class="bg-red-600 hover:bg-red-500 text-white font-bold text-xs py-2 px-1 rounded-lg transition-all text-center shadow">
+                                🔴 RED
+                            </button>
+                            <button type="button" onclick="sendFlag('CHEQUERED', 'CHEQUERED FLAG - FINISH LAP', 'blanco')"
+                                    class="bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs py-2 px-1 rounded-lg transition-all text-center shadow">
+                                🏁 FINISH
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pilot Access Requests Panel -->
                 <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
                     <h3 class="text-base font-bold mb-4 text-amber-400 flex items-center gap-2">
                         <span>⏳ Pilot Access Requests (Pending)</span>
@@ -58,31 +124,44 @@
                         <p class="text-slate-500 text-sm italic">No pending access requests.</p>
                     </div>
                 </div>
-                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-base font-bold mb-4 text-emerald-400">📢 Send Track Instruction</h3>
-                        <form id="instruction-form" class="space-y-3">
-                            <input type="text" id="instruction-input" placeholder="e.g. Enter this lap / Save battery"
-                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-colors">
-                                Transmit to Pilot
-                            </button>
-                        </form>
-                    </div>
+            </div>
+
+            <!-- Row 2: Live Timing & Sector Splits Table -->
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                        <span>⏱️ Live Timing & Sector Splits</span>
+                    </h3>
+                    <span class="text-xs text-slate-400 font-mono">Node: /rooms/<span id="lbl-live-room"></span>/live</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-700 text-xs font-semibold uppercase tracking-wider text-slate-400 bg-slate-900/50">
+                                <th class="p-3">Car / Driver</th>
+                                <th class="p-3 text-center">Lap</th>
+                                <th class="p-3 text-center">Speed</th>
+                                <th class="p-3 text-center">Battery</th>
+                                <th class="p-3 font-mono text-right">Last Lap</th>
+                                <th class="p-3 font-mono text-right">Best Lap</th>
+                                <th class="p-3 font-mono text-center">S1 / S2 / S3</th>
+                                <th class="p-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="live-timing-tbody" class="divide-y divide-slate-700/50 text-sm">
+                            <tr>
+                                <td colspan="8" class="p-4 text-center text-slate-500 italic">Waiting for live telemetry data from connected cars...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                    <h3 class="text-base font-bold mb-4 text-cyan-400">🏎️ Live Telemetry Nodes (/rooms/{roomCode}/live)</h3>
-                    <div id="live-telemetry-list" class="space-y-3">
-                        <p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>
-                    </div>
-                </div>
-                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                    <h3 class="text-base font-bold mb-4 text-sky-400">🗺️ Synchronized Circuits Repository</h3>
-                    <div id="circuits-repository-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <p class="text-slate-500 text-sm italic">Loading circuits from Firebase...</p>
-                    </div>
+
+            <!-- Row 3: Synchronized Circuits Repository -->
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <h3 class="text-base font-bold mb-4 text-sky-400">🗺️ Synchronized Circuits Repository</h3>
+                <div id="circuits-repository-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p class="text-slate-500 text-sm italic">Loading circuits from Firebase...</p>
                 </div>
             </div>
         </section>
@@ -191,6 +270,8 @@
                     document.getElementById('dashboard-section').classList.remove('hidden');
                     document.getElementById('team-info-badge').classList.remove('hidden');
                     document.getElementById('lbl-team-name').innerText = teamName;
+                    const liveRoomLbl = document.getElementById('lbl-live-room');
+                    if (liveRoomLbl) liveRoomLbl.innerText = teamName;
                     initPitListeners(teamName);
                     loadCircuitsRepository();
                 } else {
@@ -215,7 +296,7 @@
                 console.warn('Error reading pending:', err);
             });
             db.ref(`rooms/${teamName}/live`).on('value', snapshot => {
-                renderLiveTelemetry(snapshot.val());
+                renderLiveTiming(snapshot.val());
             }, err => {
                 console.warn('Error reading live telemetry:', err);
             });
@@ -259,38 +340,78 @@
             }
         }
 
-        function renderLiveTelemetry(liveData) {
-            const container = document.getElementById('live-telemetry-list');
-            if (!container) return;
-            container.innerHTML = '';
-            try {
-                if (!liveData || typeof liveData !== 'object') {
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>';
-                    return;
-                }
-                let count = 0;
-                Object.keys(liveData).forEach(deviceUid => {
-                    const telemetry = liveData[deviceUid];
-                    if (telemetry && typeof telemetry === 'object') {
-                        count++;
-                        const card = document.createElement('div');
-                        card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
-                        card.innerHTML = `
-                            <div>
-                                <p class="font-bold text-white text-sm">Car / Device: ${deviceUid}</p>
-                                <p class="text-xs text-slate-400">Speed: ${telemetry.speed || 0} km/h · Lap: ${telemetry.lap || 0} · Battery: ${telemetry.bat || '--'}%</p>
-                            </div>
-                            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" title="Telemetry Active"></span>
-                        `;
-                        container.appendChild(card);
+        function formatMs(ms) {
+            if (!ms || isNaN(ms) || ms <= 0) return '--:--.---';
+            const totalSec = ms / 1000;
+            const min = Math.floor(totalSec / 60);
+            const sec = (totalSec % 60).toFixed(3);
+            const secStr = (sec < 10 ? '0' : '') + sec;
+            return min > 0 ? `${min}:${secStr}` : secStr;
+        }
+
+        function renderLiveTiming(liveData) {
+            const tbody = document.getElementById('live-timing-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!liveData || typeof liveData !== 'object') {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500 italic">Waiting for live telemetry data from connected cars...</td></tr>';
+                return;
+            }
+
+            let count = 0;
+            Object.keys(liveData).forEach(carId => {
+                const t = liveData[carId];
+                if (t && typeof t === 'object') {
+                    count++;
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-700/30 transition-colors';
+
+                    const carName = t.car || t.carName || carId;
+                    const driverName = t.driver || t.driverName || 'Driver 1';
+                    const lap = (t.lap !== undefined) ? t.lap : (t.currentLap || 0);
+                    const speed = (t.kmh !== undefined) ? t.kmh : (t.speed || 0);
+                    const battery = (t.bat !== undefined) ? `${t.bat}%` : (t.battery ? `${t.battery}%` : '--');
+                    const lastLap = formatMs(t.lastMs || t.timeMs || t.last);
+                    const bestLap = formatMs(t.bestMs || t.best);
+
+                    // Sector splits parsing
+                    let s1 = '--.--', s2 = '--.--', s3 = '--.--';
+                    if (t.sectors && typeof t.sectors === 'object') {
+                        if (t.sectors.S1 || t.sectors['1']) s1 = formatMs(t.sectors.S1 || t.sectors['1']);
+                        if (t.sectors.S2 || t.sectors['2']) s2 = formatMs(t.sectors.S2 || t.sectors['2']);
+                        if (t.sectors.S3 || t.sectors['3']) s3 = formatMs(t.sectors.S3 || t.sectors['3']);
+                    } else if (Array.isArray(t.splits)) {
+                        if (t.splits[0]) s1 = formatMs(t.splits[0]);
+                        if (t.splits[1]) s2 = formatMs(t.splits[1]);
+                        if (t.splits[2]) s3 = formatMs(t.splits[2]);
                     }
-                });
-                if (count === 0) {
-                    container.innerHTML = '<p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>';
+
+                    tr.innerHTML = `
+                        <td class="p-3">
+                            <div class="font-bold text-white">${carName}</div>
+                            <div class="text-xs text-slate-400">${driverName}</div>
+                        </td>
+                        <td class="p-3 text-center font-bold text-amber-400 font-mono">${lap}</td>
+                        <td class="p-3 text-center font-mono text-slate-200">${speed} <span class="text-xs text-slate-500">km/h</span></td>
+                        <td class="p-3 text-center font-mono text-slate-300">${battery}</td>
+                        <td class="p-3 text-right font-mono text-emerald-400 font-semibold">${lastLap}</td>
+                        <td class="p-3 text-right font-mono text-purple-400 font-bold">${bestLap}</td>
+                        <td class="p-3 text-center font-mono text-xs text-slate-300 space-x-1">
+                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s1}</span>
+                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s2}</span>
+                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s3}</span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <span class="inline-block w-3 h-3 rounded-full bg-emerald-500 animate-pulse" title="Telemetry Live"></span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 }
-            } catch (err) {
-                console.error('Error rendering live telemetry:', err);
-                container.innerHTML = '<p class="text-slate-500 text-sm italic">Waiting for telemetry data from cars...</p>';
+            });
+
+            if (count === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500 italic">Waiting for live telemetry data from connected cars...</td></tr>';
             }
         }
 
@@ -307,6 +428,36 @@
             }
         };
 
+        window.sendQuickCommand = function(commandText, bgKey = 'amarillo') {
+            if (!activeTeamName || !commandText) return;
+            db.ref(`rooms/${activeTeamName}/instructions`).set({
+                text: commandText,
+                message: commandText,
+                bg: bgKey,
+                timestamp: Date.now(),
+                t: Date.now()
+            }).then(() => {
+                const input = document.getElementById('instruction-input');
+                if (input) input.value = '';
+            }).catch(err => {
+                console.error('Error transmitting quick command:', err);
+            });
+        };
+
+        window.sendFlag = function(flagType, text, bgKey) {
+            if (!activeTeamName) return;
+            db.ref(`rooms/${activeTeamName}/instructions`).set({
+                text: text,
+                message: text,
+                flag: flagType,
+                bg: bgKey,
+                timestamp: Date.now(),
+                t: Date.now()
+            }).catch(err => {
+                console.error('Error transmitting flag:', err);
+            });
+        };
+
         document.getElementById('instruction-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const message = document.getElementById('instruction-input').value.trim();
@@ -315,6 +466,7 @@
             db.ref(`rooms/${activeTeamName}/instructions`).set({
                 text: message,
                 message: message,
+                bg: 'amarillo',
                 timestamp: Date.now(),
                 t: Date.now()
             }).then(() => {
