@@ -3,7 +3,10 @@ package com.ejemplo.laptimer
 import android.content.Intent
 import android.net.Uri
 import android.text.InputType
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import com.ejemplo.laptimer.util.ValidationUtils
 import java.net.URLEncoder
 import java.util.Locale
 
@@ -11,25 +14,36 @@ import java.util.Locale
 class SessionSettingsActivity : PageActivity() {
     override val pageTitle: String = "Settings & Configuration"
 
+    private val viewModel: SettingsViewModel by viewModels()
+
     private val restoreLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) doRestore(uri)
         }
 
     override fun build() {
-        val settings = NetSettings(this)
+        val settings = viewModel.settings
+        val currentUiState = viewModel.uiState.value
 
         val cPit = card("Telemetry & Pit Crew")
-        val swEnabled = check(cPit, "Enable telemetry with Pit Wall", settings.enabled)
-        val etRoom = textField(
-            cPit, "Room Code (10 characters)", settings.ensureRoom(), "",
+        val swEnabled = check(cPit, "Enable telemetry with Pit Wall", currentUiState.enabled)
+
+        val etTeamName = textField(
+            cPit, "Team / Session Name (6-15 chars, alphanumeric)",
+            currentUiState.teamName, "Ej. TORQUE TEAM",
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
         )
-        addButton(cPit, button("GENERATE NEW CODE") { etRoom.setText(NetSettings.newCode()) })
-        // Car Name, Current Driver and Pit Web Panel URL removed from settings UI (fixed by project default)
-        val etInt = numField(cPit, "Telemetry Interval (seconds; min 10)", settings.intervalS.toString())
+        val etPin = textField(
+            cPit, "Access PIN (4-6 digits)",
+            currentUiState.pin, "••••",
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        )
+
+        val etInt = numField(cPit, "Telemetry Interval (seconds; min 10)", currentUiState.intervalS.toString())
+
         addButton(cPit, button("SHARE TELEMETRY LINK") {
-            shareLink(settings.panelUrl, settings.dbUrl, etRoom.text.toString())
+            val teamName = etTeamName.text.toString().trim()
+            shareLink(settings.panelUrl, settings.dbUrl, teamName)
         })
 
         val c1 = card("Display & Driving Speed Lock")
@@ -77,7 +91,7 @@ class SessionSettingsActivity : PageActivity() {
         rowOf(c2, block("Low Battery Alert (%)", etWarn), block("Critical Battery Alert (%)", etCrit))
 
         val c4 = card("Demo Simulator")
-        val etDemo = numField(c4, "Demo pit stop stop duration (seconds; 0 = auto)", settings.demoStopSec.toString())
+        val etDemo = numField(c4, "Demo pit stop duration (seconds; 0 = auto)", settings.demoStopSec.toString())
 
         val c5 = card("Backup & Data")
         val swTrace = check(c5, "Save full GPS trace in session files", settings.saveTrace)
@@ -90,32 +104,53 @@ class SessionSettingsActivity : PageActivity() {
         addFooter(
             button("CANCEL") { finish() },
             button("SAVE SETTINGS", true) {
-                settings.enabled = swEnabled.isChecked
-                settings.room = etRoom.text.toString()
-                // carName, driverName and panelUrl retained in model but removed from settings UI
-                settings.intervalS = etInt.text.toString().toIntOrNull() ?: 10
+                val inputTeam = etTeamName.text.toString().trim()
+                val inputPin = etPin.text.toString().trim()
 
-                settings.lockKmh = etLock.text.toString().toIntOrNull() ?: 10
-                settings.rangePct = etRange.text.toString().toFloatOrNull() ?: 2f
-                settings.lapSummarySec = etSum.text.toString().toIntOrNull() ?: 4
-                settings.batWarn = etWarn.text.toString().toIntOrNull() ?: 20
-                settings.batCrit = etCrit.text.toString().toIntOrNull() ?: 10
-                settings.refScope = scope()
-                settings.outlapCounts = cbOut.isChecked
-                settings.inlapCounts = cbIn.isChecked
-                settings.demoStopSec = etDemo.text.toString().toIntOrNull() ?: 0
-                settings.saveTrace = swTrace.isChecked
-                settings.gpsSource = gpsChoice()
+                viewModel.onTeamNameChanged(inputTeam)
+                viewModel.onPinChanged(inputPin)
+                viewModel.onEnabledChanged(swEnabled.isChecked)
+                viewModel.onIntervalChanged(etInt.text.toString().toIntOrNull() ?: 10)
 
-                // Theme is already applied instantly on click
+                viewModel.validateAndSave(
+                    onSuccess = {
+                        settings.lockKmh = etLock.text.toString().toIntOrNull() ?: 10
+                        settings.rangePct = etRange.text.toString().toFloatOrNull() ?: 2f
+                        settings.lapSummarySec = etSum.text.toString().toIntOrNull() ?: 4
+                        settings.batWarn = etWarn.text.toString().toIntOrNull() ?: 20
+                        settings.batCrit = etCrit.text.toString().toIntOrNull() ?: 10
+                        settings.refScope = scope()
+                        settings.outlapCounts = cbOut.isChecked
+                        settings.inlapCounts = cbIn.isChecked
+                        settings.demoStopSec = etDemo.text.toString().toIntOrNull() ?: 0
+                        settings.saveTrace = swTrace.isChecked
+                        settings.gpsSource = gpsChoice()
 
-                finish()
+                        runOnUiThread {
+                            Toast.makeText(this@SessionSettingsActivity, "Settings saved successfully", Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    },
+                    onError = { errorMsg ->
+                        runOnUiThread {
+                            val idRes = ValidationUtils.validateIdentifier(inputTeam)
+                            if (idRes.isFailure) {
+                                etTeamName.error = idRes.exceptionOrNull()?.message
+                            }
+                            val pinRes = ValidationUtils.validatePin(inputPin)
+                            if (pinRes.isFailure) {
+                                etPin.error = pinRes.exceptionOrNull()?.message
+                            }
+                            Toast.makeText(this@SessionSettingsActivity, errorMsg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                )
             }
         )
     }
 
     private fun shareLink(panel: String, db: String, room: String) {
-        if (panel.isBlank() || db.isBlank()) {
+        if (panel.isBlank() || db.isBlank() || room.isBlank()) {
             return
         }
         val sep = if (panel.contains("?")) "&" else "?"

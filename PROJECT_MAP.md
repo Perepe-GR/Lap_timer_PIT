@@ -8,11 +8,12 @@ The project follows a modular, single-responsibility architecture across clean s
 3. **Application Logic (`logic/`)** - Navigation, UI state, reactive theme management, race targets, demo simulation, and reconnaissance.
 4. **Results (`results/`, root)** - Unified `ResultsActivity` with tabs: `HistoryTab`, `RecordsTab`, `StatsTab` (plus deprecated legacy activities).
 5. **Endurance Runtime & Sync (`endurance/`)** - Multi-device Endurance lobby flow, pilot session timing, leader dashboard, driver swap dialog, strategy editor, models, and unified Firebase RTDB sync under `/rooms/{roomCode}/`.
-6. **Editor (`editor/`)** - Circuit editing, gestures, gate rendering, toolbar, dialogs, and track saving.
-7. **Network, Hardware & Firebase (`net/`, `firebase/`, root)** - Network settings, USB auto-authorization, REST client, anonymous auth (`FirebaseAuthManager`), hash utilities, payload serialization, and `database.rules.json`.
-8. **Security & Validation (`util/`)** - Regex input validation for team names and numeric PINs (`ValidationUtils`), cryptographically secure salt generation and SHA-256 PIN hashing (`SecurityUtils`).
-9. **Web Pit Wall Dashboard (`pit-panel/`)** - Responsive HTML5/Tailwind CSS dashboard for the Crew Chief with real-time driver request management, tactical instructions, and circuit catalog.
-10. **UI Components (`ui/`, root)** - View setup, controller wiring, custom views (`TrackMapView`, `DeltaBarView`, `LineChartView`, `PageRenderView`).
+6. **Settings & Configuration (root)** - `SessionSettingsActivity.kt`, `PitSettingsActivity.kt`, and `SettingsViewModel.kt` enforcing v2.3.0 security standards (identifier validation, numeric PIN hashing with salt, and Firebase team synchronization).
+7. **Editor (`editor/`)** - Circuit editing, gestures, gate rendering, toolbar, dialogs, and track saving.
+8. **Network, Hardware & Firebase (`net/`, `firebase/`, root)** - Network settings, USB auto-authorization, REST client, anonymous auth (`FirebaseAuthManager`), hash utilities, payload serialization, and `database.rules.json`.
+9. **Security & Validation (`util/`)** - Regex input validation for team names and numeric PINs (`ValidationUtils`), cryptographically secure salt generation and SHA-256 PIN hashing (`SecurityUtils`).
+10. **Web Pit Wall Dashboard (`pit-panel/`)** - Responsive HTML5/Tailwind CSS dashboard for the Crew Chief with real-time driver request management, tactical instructions, and circuit catalog.
+11. **UI Components (`ui/`, root)** - View setup, controller wiring, custom views (`TrackMapView`, `DeltaBarView`, `LineChartView`, `PageRenderView`).
 
 ## Key Modules by Subpackage
 
@@ -55,6 +56,11 @@ The project follows a modular, single-responsibility architecture across clean s
 - `StatsTab.kt` - Overall records, totals, and optimal lap time summary.
 - `HistoryActivity.kt` - [DEPRECATED - merged into ResultsActivity].
 - `RecordsActivity.kt` - [DEPRECATED - merged into ResultsActivity].
+
+### Settings & Configuration (root)
+- `SessionSettingsActivity.kt` - General settings activity refactored with `SettingsViewModel`, strict validation (`ValidationUtils`), numeric PIN input, and SHA-256 + salt security.
+- `PitSettingsActivity.kt` - Pit-specific settings screen aligned with `SettingsViewModel` and v2.3.0 standards.
+- `SettingsViewModel.kt` - Dedicated ViewModel managing settings UI state, input validation, PIN hashing (`SecurityUtils`), and Firebase synchronization (`/teams/{teamName}`).
 
 ### Endurance Multi-Device Sync & Runtime (`endurance/`)
 - **Lobby (`endurance/lobby/`)**:

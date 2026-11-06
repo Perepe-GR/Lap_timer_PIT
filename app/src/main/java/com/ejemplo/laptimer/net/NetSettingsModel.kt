@@ -1,7 +1,6 @@
 package com.ejemplo.laptimer.net
 
 import org.json.JSONObject
-import java.security.SecureRandom
 
 data class StintTarget(
     val driver: String = "",
@@ -34,14 +33,6 @@ data class StintTarget(
             o.optInt("planLaps", 0), o.optInt("planMin", 0),
             o.optInt("pitSec", 0)
         )
-
-        fun newCode(): String {
-            val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-            val rnd = SecureRandom()
-            val sb = StringBuilder()
-            for (i in 0 until 10) sb.append(alphabet[rnd.nextInt(alphabet.length)])
-            return sb.toString()
-        }
 
         fun keyOf(s: String): String {
             val k = s.trim().lowercase().replace(Regex("[^a-z0-9_-]"), "-").trim('-')

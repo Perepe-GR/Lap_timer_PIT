@@ -3,6 +3,7 @@ package com.ejemplo.laptimer
 import android.content.Context
 import com.ejemplo.laptimer.net.NetSettingsStore
 import com.ejemplo.laptimer.net.StintTarget
+import com.ejemplo.laptimer.util.ValidationUtils
 import org.json.JSONArray
 
 /** Ajustes de red, de sesión y estado del stint, guardados en el móvil. */
@@ -14,6 +15,9 @@ class NetSettings(context: Context) {
     var enabled: Boolean get() = p.getBoolean("enabled", false); set(v) = store.putB("enabled", v)
     var dbUrl: String get() = p.getString("db", "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app") ?: "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"; set(v) = store.putS("db", v.trim().trimEnd('/'))
     var room: String get() = p.getString("room", "") ?: ""; set(v) = store.putS("room", v.trim().uppercase())
+    var pin: String get() = p.getString("pin", "1234") ?: "1234"; set(v) = store.putS("pin", v.trim())
+    var pinHash: String get() = p.getString("pinHash", "") ?: ""; set(v) = store.putS("pinHash", v)
+    var salt: String get() = p.getString("salt", "") ?: ""; set(v) = store.putS("salt", v)
     var intervalS: Int get() = p.getInt("interval", 10); set(v) = store.putI("interval", v.coerceAtLeast(10))
     var panelUrl: String get() = p.getString("panel", "https://user.github.io/pit-panel/") ?: "https://user.github.io/pit-panel/"; set(v) = store.putS("panel", v.trim())
     var saveTrace: Boolean get() = p.getBoolean("trace", true); set(v) = store.putB("trace", v)
@@ -54,7 +58,7 @@ class NetSettings(context: Context) {
         "internal" -> "GPS interno (Móvil / Tablet)"
         "racebox" -> "RaceBox (BLE / Mock)"
         "dragy" -> "Dragy (10Hz / 25Hz)"
-        "garmin" -> "Garmin (GLO / Catalyst)"
+        "garmin" -> "Garmin (Catalyst / GLO)"
         "external_bt" -> "GPS Bluetooth externo (NMEA)"
         else -> "Antena USB u-blox (25 Hz)"
     }
@@ -144,15 +148,14 @@ class NetSettings(context: Context) {
 
     fun ensureRoom(): String {
         var r = room
-        if (r.isBlank()) {
-            r = StintTarget.newCode()
+        if (r.isBlank() || (r.length == 10 && !ValidationUtils.isValidIdentifier(r))) {
+            r = "TORQUE TEAM"
             room = r
         }
         return r
     }
 
     companion object {
-        fun newCode(): String = StintTarget.newCode()
         fun keyOf(s: String): String = StintTarget.keyOf(s)
     }
 }
