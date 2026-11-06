@@ -2,7 +2,7 @@ package com.ejemplo.laptimer.endurance.sync
 
 import android.util.Log
 import com.ejemplo.laptimer.firebase.FirebaseAuthManager
-import com.ejemplo.laptimer.firebase.HashUtils
+import com.ejemplo.laptimer.util.SecurityUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -66,16 +66,15 @@ class EnduranceSyncClient(
 
         if (meta == null) {
             // Creation logic (Room does NOT exist)
-            val salt = HashUtils.generateSalt()
-            val pinHash = HashUtils.sha256(salt, pin)
+            val hashResult = SecurityUtils.hashPin(pin)
             val newMeta = TeamMeta(
                 code = cleanCode,
                 name = name.ifBlank { cleanCode },
                 circuitId = circuitId.ifBlank { "Circuit 1" },
                 createdBy = currentUid,
                 createdAt = System.currentTimeMillis(),
-                pinHash = pinHash,
-                salt = salt,
+                pinHash = hashResult.pinHash,
+                salt = hashResult.salt,
                 leaderUid = currentUid,
                 mode = "endurance"
             )
@@ -89,7 +88,7 @@ class EnduranceSyncClient(
         } else {
             // Reconnection logic (Room DOES exist)
             val isValidPin = if (meta.pinHash.isNotBlank()) {
-                HashUtils.sha256(meta.salt, pin.trim()) == meta.pinHash
+                SecurityUtils.verifyPin(pin, meta.salt, meta.pinHash)
             } else {
                 meta.code == pin.trim()
             }
@@ -144,7 +143,7 @@ class EnduranceSyncClient(
         val meta = metaRes.getOrThrow() ?: throw IOException("Team code not found")
 
         val isValidPin = if (meta.pinHash.isNotBlank()) {
-            HashUtils.sha256(meta.salt, inputPin.trim()) == meta.pinHash
+            SecurityUtils.verifyPin(inputPin, meta.salt, meta.pinHash)
         } else {
             meta.code == inputPin.trim()
         }

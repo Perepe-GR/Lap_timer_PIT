@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.ejemplo.laptimer.NetSettings
 import com.ejemplo.laptimer.endurance.sync.*
 import com.ejemplo.laptimer.firebase.FirebaseAuthManager
-import com.ejemplo.laptimer.firebase.HashUtils
+import com.ejemplo.laptimer.util.SecurityUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -109,7 +109,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
                 return@launch
             }
             val isValidPin = if (meta.pinHash.isNotBlank()) {
-                HashUtils.sha256(meta.salt, inputPin.trim()) == meta.pinHash
+                SecurityUtils.verifyPin(inputPin, meta.salt, meta.pinHash)
             } else {
                 meta.code == inputPin.trim()
             }

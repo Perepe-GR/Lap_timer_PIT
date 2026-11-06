@@ -1,16 +1,11 @@
 package com.ejemplo.laptimer.firebase
 
-import java.security.MessageDigest
-import java.util.UUID
+import com.ejemplo.laptimer.util.SecurityUtils
 
-/** Utility for generating salts and SHA-256 pin hashes according to CONTRATO-PANEL.md V2.1.9. */
+/** Utility delegating to SecurityUtils for generating salts and SHA-256 pin hashes. */
 object HashUtils {
 
-    fun generateSalt(): String = UUID.randomUUID().toString().replace("-", "").take(16)
+    fun generateSalt(): String = SecurityUtils.generateSalt()
 
-    fun sha256(salt: String, pin: String): String {
-        val input = salt + pin
-        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
+    fun sha256(salt: String, pin: String): String = SecurityUtils.sha256(salt, pin)
 }
