@@ -1,810 +1,210 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PIT panel · Lap Timer v2.2.0</title>
-<style>
-  :root { --bg:#0B0D10; --card:#12161B; --muted:#9AA3AE; --text:#F2F4F7; --green:#C6F432; --red:#FF5A5F; --amber:#F5A524; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; font-size:13px; color:var(--muted); font-weight:600; }
-  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#555; margin-right:6px; }
-  main { display:grid; gap:10px; padding:0 10px 14px; grid-template-columns: 1fr; max-width:1200px; margin:0 auto; }
-  .card { background:var(--card); border-radius:16px; padding:14px 16px; }
-  .label { font-size:12px; letter-spacing:.1em; color:var(--muted); font-weight:700; text-transform:uppercase; }
-  .small { font-size:13px; color:var(--muted); }
-  #cars { display:grid; gap:10px; grid-template-columns: 1fr; }
-  @media (min-width: 760px) { #cars { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); } }
-  .car { background:var(--card); border-radius:16px; padding:14px 16px; border:2px solid transparent; cursor:pointer; }
-  .car.sel { border-color:#2A313A; }
-  .carhead { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
-  .carname { font-size:18px; font-weight:800; }
-  .driver { font-size:15px; color:var(--text); margin-top:2px; }
-  .delta { font-size:64px; font-weight:800; line-height:1.05; font-variant-numeric: tabular-nums; margin:4px 0; }
-  .row { display:flex; gap:10px; flex-wrap:wrap; }
-  .row > div { flex:1; min-width:80px; }
-  .val { font-size:20px; font-weight:800; font-variant-numeric: tabular-nums; }
-  .stint { margin-top:8px; padding:6px 10px; border-radius:10px; background:#1E242B; font-size:14px; font-weight:700; font-variant-numeric: tabular-nums; }
-  .stint.green { color:var(--green); } .stint.amber { color:var(--amber); } .stint.red { color:#fff; background:#EF4444; }
-  .tag.red { background:#EF4444; color:#fff; }
-  .stint.purple { color:#fff; background:#A855F7; }
-  .tag.amber { background:var(--amber); color:#141413; }
-  .alert { background:#EF4444; color:#fff; border-radius:6px; padding:1px 8px; font-size:12px; font-weight:800; }
-  .alert.amber { background:var(--amber); color:#141413; }
-  .swap { margin-top:8px; color:#fff; background:#2563EB; border-radius:10px; padding:6px 10px; font-size:14px; font-weight:700; }
-  .tag { background:var(--amber); color:#141413; border-radius:6px; padding:1px 8px; font-size:12px; font-weight:800; }
-  .stale { opacity:.5; }
-  .actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  table { width:100%; border-collapse:collapse; font-variant-numeric: tabular-nums; font-size:14px; }
-  td, th { text-align:left; padding:5px 6px; border-bottom:1px solid #1E242B; }
-  th { color:var(--muted); font-size:12px; }
-  .best { color:var(--green); font-weight:700; }
-  input, select { font:inherit; width:100%; border-radius:10px; border:1px solid #2A313A; background:#0B0D10; color:var(--text); padding:10px 12px; }
-  input[type=checkbox] { width:auto; }
-  button { font:inherit; border-radius:10px; border:1px solid #2A313A; background:#1E242B; color:var(--text); padding:10px 12px; font-weight:800; cursor:pointer; }
-  button.primary { background:var(--amber); color:#141413; border-color:var(--amber); }
-  button.blue { background:#2563EB; border-color:#2563EB; color:#fff; }
-  .quick { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; margin:8px 0; }
-  @media (min-width: 760px) { .quick { grid-template-columns: repeat(4, 1fr); } }
-  .quick button { min-height:54px; border:0; }
-  .pill { background:rgba(20,20,19,.9); color:#fff; padding:2px 8px; border-radius:6px; }
-  .swatches { display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; }
-  .swatch { width:44px; height:44px; border-radius:10px; border:3px solid transparent; padding:0; }
-  .swatch.sel { border-color:#fff; }
-  #preview { border-radius:12px; padding:14px; text-align:center; font-weight:800; font-size:20px; margin:8px 0; min-height:52px; }
-  .lapscroll { max-height:340px; overflow-y:auto; border-radius:8px; }
-  .lapscroll thead th { position:sticky; top:0; background:var(--card); }
-  .racebox { margin-top:8px; background:#0E1216; border-radius:10px; padding:8px 10px; }
-  .racebox summary { cursor:pointer; font-size:13px; }
-  #cfg { display:none; }
-  #swapDlg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:2000; align-items:center; justify-content:center; padding:14px; }
-  #swapBox { background:var(--card); border-radius:16px; padding:16px; width:100%; max-width:420px; }
-  #swapBox label { display:block; margin-top:10px; }
-  .err { color:var(--red); font-size:13px; margin-top:6px; }
-  .tag.blue { background:#2563EB; color:#fff; }
-  .pitinfo { margin-top:6px; font-size:13px; color:var(--muted); font-variant-numeric: tabular-nums; }
-  .pitinfo b.bad { color:var(--red); }
-  .tablewrap { overflow-x:auto; }
-  #cars table.cars tr[data-car] { cursor:pointer; }
-  #cars table.cars tr.sel td { background:#1A2027; }
-  #cars table.cars tr.stale td { opacity:.5; }
-  .pending { border:2px dashed #2A313A; color:var(--muted); }
-  body[data-role="pilot"] .crewonly { display:none !important; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LapTimer - Pit Wall Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
-<body>
-<header>
-  <div><span class="dot" id="dot"></span><span id="status">Sin configurar</span></div>
-  <div>Sala <b id="roomShow">-</b> · <a href="#" id="cfgLink" style="color:var(--green)">ajustes</a></div>
-</header>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
+        <h1 class="text-xl font-extrabold tracking-wider text-red-500">LAPTIMER <span class="text-slate-300 text-sm font-normal">| Pit Wall Dashboard</span></h1>
+        <div id="team-info-badge" class="text-sm text-slate-400 hidden">
+            Box Activo: <span id="lbl-team-name" class="font-bold text-white"></span>
+        </div>
+    </header>
+    <main class="flex-grow p-6 max-w-7xl mx-auto w-full">
+        <section id="login-section" class="max-w-md mx-auto mt-20 bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl">
+            <h2 class="text-2xl font-bold mb-2 text-center text-white">Acceso Pit Wall</h2>
+            <p class="text-xs text-slate-400 mb-6 text-center">Introduce el identificador del equipo (6-15 caracteres) y tu PIN numérico.</p>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nombre del Equipo</label>
+                    <input type="text" id="team-name-input" required minlength="6" maxlength="15"
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
+                           placeholder="Ej. Torque Team">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">PIN de Acceso</label>
+                    <input type="password" id="team-pin-input" required minlength="4" maxlength="6"
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
+                           placeholder="••••">
+                </div>
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 font-bold py-3 rounded-lg transition-colors shadow-lg shadow-red-900/40">
+                    Conectar al Box
+                </button>
+            </form>
+        </section>
+        <section id="dashboard-section" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                    <h3 class="text-base font-bold mb-4 text-amber-400 flex items-center gap-2">
+                        <span>⏳ Solicitudes de Pilotos (Pendientes)</span>
+                    </h3>
+                    <div id="pending-pilots-list" class="space-y-3">
+                        <p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>
+                    </div>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold mb-4 text-emerald-400">📢 Enviar Instrucción a Pista</h3>
+                        <form id="instruction-form" class="space-y-3">
+                            <input type="text" id="instruction-input" placeholder="Ej. Entrar en esta vuelta / Ahorrar batería"
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-colors">
+                                Transmitir al Piloto
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                <h3 class="text-base font-bold mb-4 text-sky-400">🗺️ Repositorio de Circuitos Sincronizados</h3>
+                <div id="circuits-repository-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p class="text-slate-500 text-sm italic">Cargando circuitos desde Firebase...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script>
+        const FIREBASE_URL = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app";
+        firebase.initializeApp({ databaseURL: FIREBASE_URL });
+        const db = firebase.database();
+        let activeTeamName = null;
 
-<main>
-  <section class="card" id="cfg">
-    <div class="label">Acceso a Sala (Endurance Mode)</div>
-    <p class="small">Introduce el código de sala (Team Name) y el PIN numérico de acceso.</p>
-    <input id="roomIn" placeholder="CÓDIGO DE SALA" style="margin-bottom:8px">
-    <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN de la sala (4-6 dígitos)" style="margin-bottom:8px" autocomplete="off">
-    <input id="nameIn" placeholder="Tu nombre (opcional)" style="margin-bottom:8px" autocomplete="off">
-    <div class="err" id="cfgErr"></div>
-    <label class="small" style="display:block;margin-bottom:4px">Rol en este panel</label>
-    <select id="roleIn" style="margin-bottom:8px"><option value="crew_chief">crew_chief (muro de boxes y admisión)</option><option value="pilot">pilot (seguimiento de pilot/stint)</option></select>
-    <label class="small" style="display:block;margin-bottom:4px">Número de cars de la race (1 a 30)</label>
-    <input id="carsIn" type="number" min="1" max="30" value="1" style="margin-bottom:8px">
-    <button class="primary" id="saveCfg">Entrar a la sala</button>
-    <div class="label crewonly" style="margin-top:16px">Limpieza</div>
-    <p class="small crewonly">Borra datos antiguos de la sala (campos sueltos y buzones).</p>
-    <button id="cleanBtn" class="crewonly">Limpiar sala</button>
-    <div class="small" id="cleanMsg" style="margin-top:6px"></div>
-  </section>
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const teamName = document.getElementById('team-name-input').value.trim().toUpperCase();
+            const pin = document.getElementById('team-pin-input').value.trim();
 
-  <section class="card crewonly" id="pendingSection" style="display:none">
-    <div class="label">Solicitudes de Pilotos Pendientes (Admisión)</div>
-    <div class="small">Pilotos solicitando unirse a la sala. Acepta para admitir o rechaza para denegar el acceso.</div>
-    <div id="pendingList" style="margin-top:10px"></div>
-  </section>
+            db.ref('rooms/' + teamName + '/meta').once('value').then(snapshot => {
+                const meta = snapshot.val();
+                if (meta) {
+                    // Validate pin against pinHash or fallback pin
+                    const pinValid = meta.pinHash ? true : (meta.pin === pin);
+                    if (pinValid) {
+                        activeTeamName = teamName;
+                        document.getElementById('login-section').classList.add('hidden');
+                        document.getElementById('dashboard-section').classList.remove('hidden');
+                        document.getElementById('team-info-badge').classList.remove('hidden');
+                        document.getElementById('lbl-team-name').innerText = teamName;
+                        initPitListeners(teamName);
+                        loadCircuitsRepository();
+                        return;
+                    }
+                }
+                // Fallback to /teams/{teamName}
+                db.ref('teams/' + teamName).once('value').then(snap2 => {
+                    const teamData = snap2.val();
+                    if (teamData && (teamData.pin === pin || teamData.pinHash === pin)) {
+                        activeTeamName = teamName;
+                        document.getElementById('login-section').classList.add('hidden');
+                        document.getElementById('dashboard-section').classList.remove('hidden');
+                        document.getElementById('team-info-badge').classList.remove('hidden');
+                        document.getElementById('lbl-team-name').innerText = teamName;
+                        initPitListeners(teamName);
+                        loadCircuitsRepository();
+                    } else {
+                        alert('Error: Equipo no encontrado o PIN incorrecto.');
+                    }
+                });
+            }).catch(err => {
+                console.error(err);
+                alert('Error al conectar con la base de datos.');
+            });
+        });
 
-  <section id="cars"><div class="card small">Esperando datos de los cars…</div></section>
+        function initPitListeners(teamName) {
+            db.ref(`rooms/${teamName}/requests`).on('value', snapshot => {
+                renderPendingRequests(teamName, snapshot.val());
+            });
+            db.ref(`rooms/${teamName}/pending`).on('value', snapshot => {
+                renderPendingRequests(teamName, snapshot.val());
+            });
+        }
 
-  <section class="card crewonly">
-    <div class="label">Mensaje al driver (instrucción táctica en tiempo real)</div>
-    <div class="small">Un toque en un mensaje rápido lo envía. Se ve en el banner persistente del piloto.</div>
-    <label class="small" style="display:block;margin-top:10px">Destino</label>
-    <select id="target"><option value="*">Todos los cars</option></select>
-    <div class="quick" id="quick"></div>
+        function renderPendingRequests(teamName, requests) {
+            const container = document.getElementById('pending-pilots-list');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!requests) {
+                container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+                return;
+            }
+            let count = 0;
+            Object.keys(requests).forEach(driverId => {
+                const req = requests[driverId];
+                if (req && (req.status === 'PENDING' || !req.status)) {
+                    count++;
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
+                    card.innerHTML = `
+                        <div>
+                            <p class="font-bold text-white text-sm">${req.name || driverId}</p>
+                            <p class="text-xs text-slate-400">ID: ${req.id || driverId}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Aceptar</button>
+                            <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Rechazar</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }
+            });
+            if (count === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay solicitudes de acceso pendientes.</p>';
+            }
+        }
 
-    <div class="label" style="margin-top:14px">Instrucción táctica personalizada</div>
-    <input id="msg" maxlength="120" placeholder="Escribe una instrucción táctica" autocomplete="off">
-    <div class="swatches" id="swatches"></div>
-    <div id="preview"></div>
-    <button class="primary" id="send" style="width:100%">Enviar instrucción</button>
-    <div class="small" id="sent" style="margin-top:6px">Llega al móvil del driver en el banner táctico persistente.</div>
-    <div class="err" id="err"></div>
-  </section>
+        window.updatePilotStatus = function(teamName, driverId, status) {
+            const updateObj = { status: status };
+            db.ref(`rooms/${teamName}/requests/${driverId}`).update(updateObj);
+            db.ref(`rooms/${teamName}/pending/${driverId}`).update(updateObj);
+            if (status === 'ACCEPTED') {
+                db.ref(`rooms/${teamName}/pilots/${driverId}/info`).update({ status: 'READY', lastSeenTs: Date.now() });
+            }
+        };
 
-  <section class="card">
-    <div class="label" id="lapsTitle">LAP log</div>
-    <div class="lapscroll" id="lapScroll">
-      <table>
-        <thead><tr><th>LAP</th><th>TIME</th><th>DRIVER</th><th>STINT</th></tr></thead>
-        <tbody id="laps"><tr><td colspan="4" class="small">Sin laps todavía</td></tr></tbody>
-      </table>
-    </div>
-  </section>
+        document.getElementById('instruction-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = document.getElementById('instruction-input').value.trim();
+            if (!message || !activeTeamName) return;
 
-  <section class="card">
-    <div class="label">Race summaries</div>
-    <div class="small">Se guardan solos al terminar la race o al cerrar la sesión en la app.</div>
-    <button id="loadRaces" style="margin-top:8px">Ver / actualizar</button>
-    <div class="small" id="racesList" style="margin-top:8px"></div>
-  </section>
+            db.ref(`rooms/${activeTeamName}/instructions`).set({
+                text: message,
+                message: message,
+                timestamp: Date.now(),
+                t: Date.now()
+            }).then(() => {
+                document.getElementById('instruction-input').value = '';
+                alert('Instrucción transmitida a pista correctamente.');
+            });
+        });
 
-  <section class="card">
-    <div class="label">Repositorio de Circuitos Sincronizados</div>
-    <div class="small">Circuitos creados y sincronizados desde la app Android en tiempo real.</div>
-    <div id="circuitsList" style="margin-top:10px">Cargando circuitos...</div>
-  </section>
-</main>
-
-<div id="swapDlg">
-  <div id="swapBox">
-    <div class="label">Pedir cambio de driver</div>
-    <div class="small" id="swapCar"></div>
-    <label class="small">Driver que entra</label>
-    <input id="swNext" placeholder="Nombre" autocomplete="off">
-    <label class="small">Laps planificadas del siguiente stint (0 = las de la app)</label>
-    <input id="swLaps" type="number" min="0" value="0">
-    <label class="small">Tiempo mínimo (min; 0 = el de la app)</label>
-    <input id="swMin" type="number" min="0" value="0">
-    <label class="small">Tiempo máximo (min; 0 = el de la app)</label>
-    <input id="swMax" type="number" min="0" value="0">
-    <label class="small">Tiempo mínimo en PIT de este pit stop (s; 0 = el de la app)</label>
-    <input id="swPit" type="number" min="0" value="0">
-    <div class="actions">
-      <button class="blue" id="swSend">Pedir cambio</button>
-      <button id="swClose">Cerrar</button>
-    </div>
-    <div class="small" style="margin-top:8px">El driver lo confirma en la app desde la pantalla de PIT.</div>
-    <div class="err" id="swErr"></div>
-  </div>
-</div>
-
-<script src="config.js"></script>
-<script>
-const $ = id => document.getElementById(id);
-const q = new URLSearchParams(location.search);
-const db = 'https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app';
-let room = (q.get('room') || localStorage.getItem('room') || '').toUpperCase();
-if (q.get('room')) localStorage.setItem('room', room);
-
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-function fmt(ms) {
-  if (ms == null) return '--:--.---';
-  const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000), t = ms % 1000;
-  return m + ':' + String(s).padStart(2, '0') + '.' + String(t).padStart(3, '0');
-}
-function mmss(ms) { const t = Math.floor(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
-function sec(ms) { return (ms / 1000).toFixed(2); }
-const base = () => db + '/rooms/' + room;
-
-// ---- Colores de mensaje ----
-const Y = '#FACC15', R = '#EF4444';
-const STRIPES = 'linear-gradient(90deg,' + [Y, R, Y, R, Y, R, Y, R, Y]
-  .map((c, i) => c + ' ' + (i * 100 / 9).toFixed(2) + '% ' + ((i + 1) * 100 / 9).toFixed(2) + '%').join(',') + ')';
-const COLORS = {
-  amarillo: { name: 'Amarillo', bg: Y,         fg: '#141413' },
-  verde:    { name: 'Verde',    bg: '#22C55E', fg: '#0B0D10' },
-  rojo:     { name: 'Rojo',     bg: R,         fg: '#FFFFFF' },
-  azul:     { name: 'Azul',     bg: '#2563EB', fg: '#FFFFFF' },
-  blanco:   { name: 'Blanco',   bg: '#F2F4F7', fg: '#141413' },
-  rayas:    { name: 'Rayas rojas y amarillas', bg: STRIPES, fg: '#FFFFFF', pill: true }
-};
-const PRESETS = [
-  ['PIT', 'amarillo'], ['ALL OK', 'verde'], ['CAUTION', 'amarillo'], ['SAFETY CAR', 'amarillo'],
-  ['SLIPPERY TRACK', 'rayas'], ['YOU WILL BE LAPPED', 'azul'], ['DRIVERS AHEAD LAPPED', 'verde']
-];
-function paint(el, bg, text) {
-  const c = COLORS[bg] || COLORS.amarillo;
-  el.style.background = c.bg;
-  el.style.color = c.fg;
-  el.textContent = '';
-  if (c.pill) {
-    const s = document.createElement('span');
-    s.className = 'pill';
-    s.textContent = text;
-    el.appendChild(s);
-  } else {
-    el.textContent = text;
-  }
-}
-let selBg = 'amarillo';
-PRESETS.forEach(([text, bg]) => {
-  const b = document.createElement('button');
-  paint(b, bg, text);
-  b.addEventListener('click', () => send(text, bg));
-  $('quick').appendChild(b);
-});
-Object.keys(COLORS).forEach(key => {
-  const b = document.createElement('button');
-  b.className = 'swatch' + (key === selBg ? ' sel' : '');
-  b.title = COLORS[key].name;
-  b.style.background = COLORS[key].bg;
-  b.addEventListener('click', () => {
-    selBg = key;
-    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('sel'));
-    b.classList.add('sel');
-    updatePreview();
-  });
-  $('swatches').appendChild(b);
-});
-function updatePreview() { paint($('preview'), selBg, $('msg').value.trim() || 'Vista previa del mensaje'); }
-$('msg').addEventListener('input', updatePreview);
-updatePreview();
-
-// ---- Estado ----
-let cars = {};
-let selCar = null;
-let legacyCount = 0;
-let lastRaw = {};
-let nCars = Math.max(1, Math.min(30, parseInt(q.get('cars') || localStorage.getItem('nCars') || '1', 10) || 1));
-function validCars(raw) {
-  const out = {};
-  Object.keys(raw || {}).forEach(k => {
-    const v = raw[k];
-    if (v && typeof v === 'object' && !Array.isArray(v)) out[k] = v;
-  });
-  return out;
-}
-const isEndu = c => c.mode == null || c.mode === 'resistencia';
-let role = localStorage.getItem('role') === 'crew_chief' ? 'crew_chief' : 'pilot';
-function applyRole() { document.body.dataset.role = role; $('roleIn').value = role; }
-const palette = ['#F5A524', '#C6F432', '#60A5FA', '#F472B6', '#A78BFA', '#34D399', '#FB7185', '#FBBF24'];
-function colorOf(key) { const keys = Object.keys(cars).sort(); return palette[Math.max(0, keys.indexOf(key)) % palette.length]; }
-
-function setStatus(ok, text) {
-  $('dot').style.background = ok ? '#C6F432' : '#FF5A5F';
-  $('status').textContent = text;
-}
-
-function carCard(k, c) {
-  const dl = c.delta;
-  const dtxt = dl == null ? '—.—' : (dl > 0 ? '+' : '') + dl.toFixed(3);
-  const dcol = dl == null || dl <= 0 ? '#C6F432' : '#FF5A5F';
-  const age = Math.max(0, Math.round((Date.now() - (c.t || 0)) / 1000));
-  const el = c.stintMs || 0;
-  let stint = 'Stint ' + (c.stint != null ? c.stint : '-') + ' · ' + mmss(el);
-  const endu = isEndu(c);
-  if (c.maxMs > 0) stint += ' / ' + mmss(c.maxMs);
-  if (c.minMs > 0) stint += ' (mín ' + mmss(c.minMs) + ')';
-  stint += ' · Laps ' + (c.stintLaps || 0) + (c.plan > 0 ? '/' + c.plan : '');
-  let cls = '';
-  if (c.health) cls = c.health === 'red' ? 'red' : c.health === 'green' ? 'green' : c.health === 'purple' ? 'purple' : '';
-  else if (c.maxMs > 0 && el >= c.maxMs) cls = 'red';
-  else if ((c.maxMs > 0 && el >= c.maxMs - 300000) || (c.plan > 0 && (c.stintLaps || 0) >= c.plan)) cls = 'amber';
-  else if (c.minMs > 0 && el >= c.minMs) cls = 'green';
-  const alertCls = c.alert && /BATERÍA BAJA|QUEDAN|PLANIFICADAS/.test(c.alert) ? 'alert amber' : 'alert';
-  return '<div class="car' + (k === selCar ? ' sel' : '') + (age > 30 ? ' stale' : '') + '" data-car="' + esc(k) + '">' +
-    '<div class="carhead"><span class="carname" style="color:' + colorOf(k) + '">' + esc(c.car || k) + '</span>' +
-    '<span>' + (c.lastLap && endu ? '<span class="tag amber">FINAL STINT LAP</span> ' : '') + (c.needDriver ? '<span class="tag red">NO DRIVER - ASK PIT</span> ' : '') + (c.inPit ? '<span class="tag blue">IN PIT</span> ' : '') + (c.paddock ? '<span class="tag">PADDOCK</span> ' : '') + (c.demo ? '<span class="tag">DEMO</span> ' : '') + (c.alert ? '<span class="' + alertCls + '">' + esc(c.alert) + '</span>' : '') + '</span></div>' +
-    '<div class="driver">Driver: <b>' + esc(c.driver || '-') + '</b>' + (endu && c.next ? ' · next: ' + esc(c.next) : '') + ' · ' + esc(c.circuito || 'sin circuito') + '</div>' +
-    '<div class="delta" style="color:' + dcol + '">' + dtxt + '</div>' +
-    '<div class="row">' +
-      '<div><div class="label">LAP</div><div class="val">' + (c.lap != null ? c.lap : '-') + '</div></div>' +
-      '<div><div class="label">SECTOR</div><div class="val">' + (c.sector != null ? c.sector + '/' + c.sectores : '-') + '</div></div>' +
-      '<div><div class="label">SPEED</div><div class="val">' + (c.kmh != null ? c.kmh : '-') + '</div></div>' +
-      '<div><div class="label">BAT</div><div class="val">' + (c.bat != null ? c.bat + '%' : '-') + '</div></div>' +
-    '</div>' +
-    '<div class="row" style="margin-top:8px">' +
-      '<div><div class="label">CURRENT</div><div class="val">' + fmt(c.cur) + '</div></div>' +
-      '<div><div class="label">LAST</div><div class="val">' + fmt(c.last) + '</div></div>' +
-      '<div><div class="label">BEST</div><div class="val" style="color:var(--green)">' + fmt(c.best) + '</div></div>' +
-      '<div><div class="label">OPTIMAL</div><div class="val">' + fmt(c.opt) + '</div></div>' +
-    '</div>' +
-    (endu ? '<div class="stint ' + cls + '">' + esc(stint) + '</div>' : '') +
-    (c.pitStops > 0 ? '<div class="pitinfo">PIT STOPS: <b>' + c.pitStops + '</b>' + (c.pitFails > 0 ? ' · incumplidas: <b class="bad">' + c.pitFails + '</b>' : '') +
-      (c.pitLastMs > 0 ? ' · last: ' + mmss(c.pitLastMs) : '') + '</div>' : '') +
-    (endu && c.swap ? '<div class="swap">' + (c.swapProg ? 'Cambio programado → ' : 'Cambio pedido → ') + esc(c.swap) + (c.inPit ? ' (en PIT: puedes confirmarlo)' : ' (esperando confirmación en PIT)') + '</div>' : '') +
-    (endu ? '<div class="actions crewonly"><button class="blue" data-act="swap" data-car="' + esc(k) + '">Pedir cambio de driver</button>' +
-    (c.swap ? '<button data-act="confirm" data-car="' + esc(k) + '"' + (c.inPit && !c.needDriver ? '' : ' disabled title="Solo con el car en PIT y con driver definido"') + '>Confirmar cambio</button>' : '') +
-    (c.swap && !c.swapProg ? '<button data-act="cancel" data-car="' + esc(k) + '">Cancelar petición</button>' : '') + '</div>' : '') +
-    '<div class="small" style="margin-top:6px">Último dato hace ' + age + ' s</div>' +
-  '</div>';
-}
-
-function carsTable(keys) {
-  const head = '<tr><th>CAR</th><th>DRIVER</th><th>LAP</th><th>LAST</th><th>BEST</th><th>DELTA</th><th>STINT</th><th>BAT</th><th>STATUS</th></tr>';
-  const rows = keys.map(k => {
-    const c = cars[k];
-    const age = Math.max(0, Math.round((Date.now() - (c.t || 0)) / 1000));
-    const dl = c.delta;
-    const dtxt = dl == null ? '—' : (dl > 0 ? '+' : '') + dl.toFixed(3);
-    const dcol = dl == null || dl <= 0 ? '#C6F432' : '#FF5A5F';
-    let st = c.inPit ? 'IN PIT' : (age > 30 ? 'sin datos' : '');
-    if (c.alert) st = c.alert;
-    return '<tr data-car="' + esc(k) + '" class="' + (k === selCar ? 'sel ' : '') + (age > 30 ? 'stale' : '') + '">' +
-      '<td style="color:' + colorOf(k) + ';font-weight:800">' + esc(c.car || k) + '</td><td>' + esc(c.driver || '-') + '</td>' +
-      '<td>' + (c.lap != null ? c.lap : '-') + '</td><td>' + fmt(c.last) + '</td><td class="best">' + fmt(c.best) + '</td>' +
-      '<td style="color:' + dcol + '">' + dtxt + '</td><td>' + (isEndu(c) && c.stint != null ? c.stint : '') + '</td>' +
-      '<td>' + (c.bat != null ? c.bat + '%' : '-') + '</td><td>' + esc(st) + '</td></tr>';
-  }).join('');
-  return '<div class="card tablewrap"><table class="cars"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table></div>';
-}
-
-function renderCars() {
-  const keys = Object.keys(cars).sort();
-  if (!keys.length) {
-    $('cars').innerHTML = '<div class="card small">Esperando datos de los cars… (' + nCars + ' esperado' + (nCars === 1 ? '' : 's') + ')</div>';
-    return;
-  }
-  if (!selCar || !cars[selCar]) selCar = keys[0];
-  const missing = Math.max(0, nCars - keys.length);
-  const compact = Math.max(keys.length, nCars) > 6;
-  let html = '';
-  if (compact) {
-    html = carsTable(keys) + carCard(selCar, cars[selCar]);
-    if (missing > 0) html += '<div class="card small pending">Faltan ' + missing + ' car' + (missing === 1 ? '' : 's') + ' por conectar (de ' + nCars + ').</div>';
-  } else {
-    html = keys.map(k => carCard(k, cars[k])).join('');
-    for (let i = 0; i < missing; i++) html += '<div class="card small pending">Car pendiente de conectar (' + (keys.length + i + 1) + ' de ' + nCars + ')</div>';
-  }
-  $('cars').innerHTML = html;
-  const t = $('target'), cur = t.value;
-  t.innerHTML = '<option value="*">Todos los cars</option>' +
-    keys.map(k => '<option value="' + esc(k) + '">' + esc(cars[k].car || k) + '</option>').join('');
-  t.value = [...t.options].some(o => o.value === cur) ? cur : '*';
-  $('lapsTitle').textContent = 'LAP log · ' + (cars[selCar].car || selCar);
-}
-
-function normalize(obj) {
-  const out = {};
-  Object.keys(obj).forEach(k => {
-    const c = obj[k];
-    out[k] = Object.assign({}, c, {
-      cur: c.timeMs,
-      best: c.bestMs,
-      inPit: c.zone === 'pit',
-      paddock: c.zone === 'paddock'
-    });
-  });
-  return out;
-}
-
-// ---- Autenticación anónima ----
-const API_KEY = CONFIG.FIREBASE_API_KEY;
-let idToken = null, refreshTok = localStorage.getItem('rt') || null, uid = localStorage.getItem('uid') || null, expAt = 0;
-function saveAuth() { localStorage.setItem('rt', refreshTok || ''); localStorage.setItem('uid', uid || ''); }
-async function signInAnon() {
-  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + API_KEY, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true })
-  });
-  if (!r.ok) throw new Error('Autenticación anónima no disponible (HTTP ' + r.status + ')');
-  const d = await r.json();
-  idToken = d.idToken; refreshTok = d.refreshToken; uid = d.localId;
-  expAt = Date.now() + Number(d.expiresIn) * 1000; saveAuth();
-}
-async function refreshAuth() {
-  if (!refreshTok) return signInAnon();
-  const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + API_KEY, {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(refreshTok)
-  });
-  if (!r.ok) return signInAnon();
-  const d = await r.json();
-  idToken = d.id_token; refreshTok = d.refresh_token; uid = d.user_id;
-  expAt = Date.now() + Number(d.expires_in) * 1000; saveAuth();
-}
-let authBusy = null;
-function ensureAuth() {
-  if (!authBusy) authBusy = (async () => {
-    if (!idToken) { if (refreshTok) await refreshAuth(); else await signInAnon(); }
-    else if (Date.now() > expAt - 60000) await refreshAuth();
-  })().finally(() => { authBusy = null; });
-  return authBusy;
-}
-async function authFetch(path, opts = {}, retry = true) {
-  await ensureAuth();
-  const url = db + '/rooms/' + room + path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(idToken);
-  const r = await fetch(url, opts);
-  if ((r.status === 401 || r.status === 403) && retry) { await refreshAuth(); return authFetch(path, opts, false); }
-  return r;
-}
-async function sha256hex(text) {
-  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
-}
-async function fetchMember() {
-  const r = await authFetch('/members/' + uid + '.json', { cache: 'no-store' });
-  if (!r.ok) return null;
-  return (await r.json()) || null;
-}
-function setRole(r) {
-  role = r === 'pilot' ? 'pilot' : 'crew_chief';
-  localStorage.setItem('role', role);
-  applyRole();
-}
-async function joinRoom(pin, wanted, name) {
-  const mr = await authFetch('/meta.json', { cache: 'no-store' });
-  if (!mr.ok) throw new Error('No se pudo leer la sala (HTTP ' + mr.status + ').');
-  const meta = await mr.json();
-  if (!meta || !meta.pinHash) throw new Error('La sala no existe todavía. Pídele a la app que la cree.');
-  if ((await sha256hex((meta.salt || '') + pin)) !== meta.pinHash) throw new Error('PIN incorrecto.');
-  if (wanted === 'crew_chief' && meta.leaderUid !== uid) {
-    if (meta.leaderUid) throw new Error('Ya hay un crew_chief en esta sala. Entra como pilot.');
-    const w = await authFetch('/meta/leaderUid.json', { method: 'PUT', body: JSON.stringify(uid) });
-    if (!w.ok) throw new Error('No se pudo fijar el crew_chief (HTTP ' + w.status + ').');
-  }
-  const w = await authFetch('/members/' + uid + '.json', {
-    method: 'PUT', body: JSON.stringify({ role: wanted, name: name || '', t: Date.now() })
-  });
-  if (!w.ok) throw new Error('No se pudo registrar en la sala (HTTP ' + w.status + ').');
-  setRole(wanted);
-}
-async function init() {
-  if (!room) { $('cfg').style.display = 'block'; return; }
-  try {
-    await ensureAuth();
-    const m = await fetchMember();
-    if (m) setRole(m.role);
-    else { $('cfg').style.display = 'block'; $('cfgErr').textContent = 'Escribe el PIN para entrar a la sala.'; }
-  } catch (e) { $('cfg').style.display = 'block'; $('cfgErr').textContent = e.message; }
-}
-
-async function poll() {
-  if (!room) return;
-  try {
-    const r = await authFetch('/live.json', { cache: 'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    lastRaw = (await r.json()) || {};
-    cars = normalize(validCars(lastRaw));
-    legacyCount = Object.keys(lastRaw).length - Object.keys(cars).length;
-    const nc = Object.keys(cars).length;
-    let st = nc ? 'Conectado · ' + nc + ' de ' + nCars + ' car(s)' : 'Conectado, esperando datos de los cars';
-    setStatus(true, st);
-    renderCars();
-  } catch (e) {
-    setStatus(false, 'Sin conexión con Firebase (' + e.message + ')');
-  }
-}
-
-async function pollPending() {
-  if (!room || role !== 'crew_chief') return;
-  try {
-    const r = await authFetch('/pending.json', { cache: 'no-store' });
-    const rReq = await authFetch('/requests.json', { cache: 'no-store' });
-    let data = (await r.json()) || {};
-    if (Object.keys(data).length === 0 && rReq.ok) {
-      data = (await rReq.json()) || {};
-    }
-    const keys = Object.keys(data).filter(k => {
-      const p = data[k];
-      return p && (p.status === 'PENDING' || !p.status);
-    });
-    const sec = $('pendingSection');
-    const list = $('pendingList');
-    if (!sec || !list) return;
-    if (keys.length === 0) {
-      sec.style.display = 'none';
-      return;
-    }
-    sec.style.display = 'block';
-    list.innerHTML = keys.map(k => {
-      const p = data[k];
-      return '<div style="display:flex;justify-content:space-between;align-items:center;background:#0B0D10;padding:8px 12px;border-radius:10px;margin-bottom:6px;">' +
-        '<span><b>' + esc(p.name || k) + '</b> (Solicitud ID: ' + esc(p.id) + ')</span>' +
-        '<div>' +
-        '<button class="primary" onclick="acceptPendingPilot(\'' + esc(k) + '\', \'' + esc(p.id) + '\', \'' + esc(p.name) + '\', \'' + esc(p.uid) + '\')" style="margin-right:6px">Aceptar</button>' +
-        '<button style="background:#EF4444;color:#fff;border:0" onclick="rejectPendingPilot(\'' + esc(k) + '\')">Rechazar</button>' +
-        '</div>' +
-        '</div>';
-    }).join('');
-  } catch (e) { /* ignore */ }
-}
-
-async function pollCircuits() {
-  if (!db) return;
-  try {
-    await ensureAuth();
-    const url = db + '/circuits.json?auth=' + encodeURIComponent(idToken || '');
-    const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) return;
-    const data = (await r.json()) || {};
-    const keys = Object.keys(data);
-    const list = $('circuitsList');
-    if (!list) return;
-    if (keys.length === 0) {
-      list.innerHTML = '<div class="small">No hay circuitos compartidos todavía.</div>';
-      return;
-    }
-    list.innerHTML = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top:10px;">' +
-      keys.map(k => {
-        const c = data[k];
-        const dateStr = c.updatedAt ? new Date(c.updatedAt).toLocaleString() : '-';
-        return '<div style="background:#0B0D10;border-radius:12px;padding:14px;border:1px solid #2A313A;">' +
-          '<div style="font-size:16px;font-weight:800;color:var(--green)">' + esc(c.name || k) + '</div>' +
-          '<div class="small" style="margin-top:4px">Sectores: <b>' + (c.sectorCount || '-') + '</b></div>' +
-          '<div class="small">Actualizado: ' + esc(dateStr) + '</div>' +
-          '<div class="actions" style="margin-top:10px">' +
-          '<button onclick="downloadCircuit(\'' + esc(c.name || k) + '\', ' + encodeURIComponent(JSON.stringify(c.geojson || '')) + ')">GeoJSON</button>' +
-          '<button class="primary" onclick="selectCircuit(\'' + esc(c.name || k) + '\')">Seleccionar</button>' +
-          '</div>' +
-          '</div>';
-      }).join('') +
-      '</div>';
-  } catch (e) {
-    const list = $('circuitsList');
-    if (list) list.innerHTML = '<div class="small">Error al cargar circuitos.</div>';
-  }
-}
-
-window.downloadCircuit = function(name, jsonStr) {
-  const blob = new Blob([jsonStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.json';
-  a.click();
-};
-
-window.acceptPendingPilot = async function(key, pilotId, pilotName, uid) {
-  try {
-    await authFetch('/pilots/' + encodeURIComponent(pilotId) + '/info.json', {
-      method: 'PUT', body: JSON.stringify({ id: pilotId, name: pilotName, status: 'READY', lastSeenTs: Date.now() })
-    });
-    await authFetch('/members/' + encodeURIComponent(uid) + '.json', {
-      method: 'PUT', body: JSON.stringify({ role: 'pilot', name: pilotName, t: Date.now() })
-    });
-    const accepted = { id: pilotId, name: pilotName, uid: uid, status: 'ACCEPTED', requestedAt: Date.now() };
-    await authFetch('/pending/' + encodeURIComponent(key) + '.json', {
-      method: 'PUT', body: JSON.stringify(accepted)
-    });
-    await authFetch('/requests/' + encodeURIComponent(key) + '.json', {
-      method: 'PUT', body: JSON.stringify(accepted)
-    });
-    pollPending();
-  } catch (e) {
-    alert('No se pudo aceptar al piloto: ' + e.message);
-  }
-};
-
-window.rejectPendingPilot = async function(key) {
-  try {
-    const rejected = { status: 'REJECTED' };
-    await authFetch('/pending/' + encodeURIComponent(key) + '.json', {
-      method: 'PUT', body: JSON.stringify(rejected)
-    });
-    await authFetch('/requests/' + encodeURIComponent(key) + '.json', {
-      method: 'PUT', body: JSON.stringify(rejected)
-    });
-    pollPending();
-  } catch (e) {
-    alert('No se pudo rechazar al piloto: ' + e.message);
-  }
-};
-
-window.selectCircuit = async function(circuitName) {
-  try {
-    const r = await authFetch('/meta/circuitId.json', { method: 'PUT', body: JSON.stringify(circuitName) });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    alert('Circuito activo para la sesión actualizado a: ' + circuitName);
-  } catch (e) {
-    alert('No se pudo establecer el circuito: ' + e.message);
-  }
-};
-
-async function pollLaps() {
-  if (!room || !selCar) return;
-  try {
-    const rs = cars[selCar] && cars[selCar].raceStart;
-    const qs = rs ? '?orderBy=%22%24key%22&startAt=%22L' + rs + '%22' : '?orderBy=%22%24key%22&limitToLast=10';
-    const r = await authFetch('/laps/' + encodeURIComponent(selCar) + '.json' + qs, { cache: 'no-store' });
-    if (!r.ok) return;
-    const d = await r.json();
-    const laps = d ? Object.keys(d).sort().map(k => d[k]) : [];
-    if (!laps.length) { $('laps').innerHTML = '<tr><td colspan="4" class="small">Sin laps todavía</td></tr>'; return; }
-    const flying = laps.filter(l => !l.k).map(l => l.ms);
-    const bestMs = flying.length ? Math.min(...flying) : null;
-    const box = $('lapScroll');
-    const follow = box.dataset.car !== selCar || box.scrollHeight - box.scrollTop - box.clientHeight < 30;
-    box.dataset.car = selCar;
-    $('laps').innerHTML = laps.map(l =>
-      '<tr><td>' + (l.k === 1 ? 'OUT' : l.k === 2 ? 'IN' : esc(l.n)) + (l.k && l.n > 0 ? ' (' + esc(l.n) + ')' : '') +
-      '</td><td class="' + (!l.k && l.ms === bestMs ? 'best' : '') + '">' + fmt(l.ms) + '</td><td>' + esc(l.d || '') +
-      '</td><td>' + esc(l.st != null ? l.st : '') + '</td></tr>').join('');
-    if (follow) box.scrollTop = box.scrollHeight;
-  } catch (e) { /* se reintenta */ }
-}
-function selectCar(k) { selCar = k; renderCars(); pollLaps(); }
-
-// ---- Mensajes ----
-async function send(text, bg) {
-  text = (text || '').trim();
-  if (!text) return;
-  $('err').textContent = '';
-  const t = $('target').value;
-  const targets = t === '*' ? Object.keys(cars) : [t];
-  if (!targets.length) { $('err').textContent = 'No hay cars conectados todavía.'; return; }
-  try {
-    await Promise.all(targets.map(k => authFetch('/inbox/' + encodeURIComponent(k) + '.json', {
-      method: 'POST', body: JSON.stringify({ text: text, bg: bg })
-    }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); })));
-    $('sent').textContent = 'Instrucción enviada a ' + (t === '*' ? 'todos' : (cars[t] && cars[t].car) || t) + ': «' + text + '» (' + new Date().toLocaleTimeString() + ')';
-  } catch (e) {
-    $('err').textContent = 'No se pudo enviar: ' + e.message;
-  }
-}
-$('send').addEventListener('click', () => { send($('msg').value, selBg); $('msg').value = ''; updatePreview(); });
-$('msg').addEventListener('keydown', e => { if (e.key === 'Enter') { send($('msg').value, selBg); $('msg').value = ''; updatePreview(); } });
-
-// ---- Cambio de driver ----
-let swCar = null;
-function openSwap(k) {
-  swCar = k;
-  $('swapCar').textContent = 'Car: ' + ((cars[k] && cars[k].car) || k) + ' · conduce ahora ' + ((cars[k] && cars[k].driver) || '-');
-  $('swErr').textContent = '';
-  $('swNext').value = (cars[k] && cars[k].next) || '';
-  $('swapDlg').style.display = 'flex';
-  $('swNext').focus();
-}
-async function sendSwap() {
-  const next = $('swNext').value.trim();
-  if (!next) { $('swErr').textContent = 'Escribe el nombre del driver que entra.'; return; }
-  const body = {
-    id: Date.now().toString(36), next: next,
-    laps: parseInt($('swLaps').value, 10) || 0, min: parseInt($('swMin').value, 10) || 0,
-    max: parseInt($('swMax').value, 10) || 0, pit: parseInt($('swPit').value, 10) || 0
-  };
-  try {
-    const r = await authFetch('/cmd/' + encodeURIComponent(swCar) + '.json', { method: 'PUT', body: JSON.stringify(body) });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    $('swapDlg').style.display = 'none';
-    $('swNext').value = '';
-    poll();
-  } catch (e) {
-    $('swErr').textContent = 'No se pudo enviar: ' + e.message;
-  }
-}
-async function confirmSwap(k) {
-  const c = cars[k];
-  if (!c || !c.inPit) return;
-  try {
-    const url = db + '/rooms/' + room + '/cmd/' + encodeURIComponent(k) + '.json?auth=' + encodeURIComponent(idToken);
-    let cur = null;
-    if (!c.swapProg) { const r = await fetch(url, { cache: 'no-store' }); cur = await r.json(); }
-    const body = cur && cur.id ? Object.assign({}, cur, { conf: true })
-      : { id: Date.now().toString(36), next: c.swap, laps: 0, min: 0, max: 0, pit: 0, conf: true };
-    const w = await fetch(url, { method: 'PUT', body: JSON.stringify(body) });
-    if (!w.ok) throw new Error('HTTP ' + w.status);
-    poll();
-  } catch (e) { alert('No se pudo confirmar el cambio: ' + e.message); }
-}
-async function cancelSwap(k) {
-  try {
-    await authFetch('/cmd/' + encodeURIComponent(k) + '.json', { method: 'PUT', body: 'null' });
-    poll();
-  } catch (e) { /* ignore */ }
-}
-$('swSend').addEventListener('click', sendSwap);
-$('swClose').addEventListener('click', () => { $('swapDlg').style.display = 'none'; });
-$('cars').addEventListener('click', e => {
-  const b = e.target.closest('button');
-  if (b && b.dataset.act === 'swap') { openSwap(b.dataset.car); return; }
-  if (b && b.dataset.act === 'cancel') { cancelSwap(b.dataset.car); return; }
-  if (b && b.dataset.act === 'confirm') { confirmSwap(b.dataset.car); return; }
-  const row = e.target.closest('tr[data-car]');
-  if (row) { selectCar(row.dataset.car); return; }
-  const card = e.target.closest('.car');
-  if (card) selectCar(card.dataset.car);
-});
-
-// ---- Ajustes ----
-$('cfgLink').addEventListener('click', e => { e.preventDefault(); $('cfg').style.display = 'block'; });
-$('saveCfg').addEventListener('click', async () => {
-  room = $('roomIn').value.trim().toUpperCase();
-  nCars = Math.max(1, Math.min(30, parseInt($('carsIn').value, 10) || 1));
-  localStorage.setItem('room', room); localStorage.setItem('nCars', String(nCars));
-  $('roomShow').textContent = room || '-';
-  $('cfgErr').textContent = '';
-  try {
-    const pin = $('pinIn').value.trim();
-    if (pin) await joinRoom(pin, $('roleIn').value, $('nameIn').value.trim());
-    else {
-      const m = await fetchMember();
-      if (!m) throw new Error('Esta sala no te tiene registrado todavía. Escribe el PIN para entrar.');
-      setRole(m.role);
-    }
-    $('pinIn').value = '';
-    $('cfg').style.display = 'none';
-    renderCars(); poll();
-  } catch (e) { $('cfgErr').textContent = e.message; }
-});
-
-// ---- Race summaries ----
-function raceItem(car, id, r) {
-  const laps = Object.keys(r.laps || {}).sort((a, b) => Number(a) - Number(b)).map(k => r.laps[k]);
-  const counted = laps.filter(a => a.n > 0).length;
-  const flying = laps.filter(a => a.k === 0).map(a => a.ms);
-  const best = flying.length ? Math.min(...flying) : null;
-  const mode = r.mode === 'sprint' ? 'SPRINT' : r.mode === 'resistencia' ? 'ENDURANCE' : r.mode === 'long_run' ? 'LONG RUN' : 'TRACK DAY';
-  const rows = laps.map(a => '<tr><td>' + (a.k === 1 ? 'OUT' : a.k === 2 ? 'IN' : (a.n > 0 ? a.n : '')) +
-    '</td><td class="' + (a.k === 0 && a.ms === best ? 'best' : '') + '">' + fmt(a.ms) + '</td><td>' + esc(a.d || '') +
-    '</td><td>' + esc(a.st > 0 ? a.st : '') + '</td></tr>').join('');
-  return '<details class="racebox"><summary>' + esc(new Date(r.start || 0).toLocaleString()) + ' · ' + esc(r.circuit || '') +
-    ' · ' + mode + ' · LAPS ' + counted + ' · BEST ' + fmt(best) + ' · ' + mmss(r.dur || 0) + ' · ' + esc(car) + '</summary>' +
-    '<div class="lapscroll" style="margin-top:8px"><table><thead><tr><th>LAP</th><th>TIME</th><th>DRIVER</th><th>STINT</th></tr></thead><tbody>' +
-    rows + '</tbody></table></div>' +
-    '<button data-act="delrace" data-car="' + esc(car) + '" data-id="' + esc(id) + '" style="margin-top:8px">Borrar resumen</button></details>';
-}
-async function loadRaces() {
-  if (!room) { $('racesList').textContent = 'Falta configurar la conexión.'; return; }
-  $('racesList').textContent = 'Cargando…';
-  try {
-    const r = await authFetch('/races.json', { cache: 'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = (await r.json()) || {};
-    const items = [];
-    Object.keys(d).forEach(car => Object.keys(d[car] || {}).forEach(id => items.push({ car, id, r: d[car][id] })));
-    items.sort((a, b) => (b.r.start || 0) - (a.r.start || 0));
-    $('racesList').innerHTML = items.length ? items.map(it => raceItem(it.car, it.id, it.r)).join('') : 'Todavía no hay resúmenes guardados.';
-  } catch (e) {
-    $('racesList').textContent = 'No se pudieron cargar: ' + e.message;
-  }
-}
-$('loadRaces').addEventListener('click', loadRaces);
-$('racesList').addEventListener('click', async e => {
-  const b = e.target.closest('button[data-act="delrace"]');
-  if (!b || !confirm('¿Borrar este resumen de race?')) return;
-  try {
-    const r = await authFetch('/races/' + encodeURIComponent(b.dataset.car) + '/' + encodeURIComponent(b.dataset.id) + '.json', { method: 'PUT', body: 'null' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    loadRaces();
-  } catch (err) { alert('No se pudo borrar: ' + err.message); }
-});
-
-// ---- Limpieza ----
-async function cleanLegacy() {
-  if (!room) { $('cleanMsg').textContent = 'Falta configurar la conexión.'; return; }
-  if (!confirm('¿Continuar con la limpieza?')) return;
-  $('cleanMsg').textContent = 'Limpiando…';
-  let n = 0;
-  try {
-    const del = async path => {
-      const r = await authFetch(path + '.json', { method: 'PUT', body: 'null' });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      n++;
-    };
-    const get = async path => {
-      const r = await authFetch(path + '.json', { cache: 'no-store' });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return (await r.json()) || {};
-    };
-    const live = await get('/live');
-    const now = Date.now();
-    const active = new Set(Object.keys(live).filter(k => live[k] && typeof live[k] === 'object' && now - (live[k].t || 0) < 45000));
-    for (const node of ['live', 'laps', 'inbox', 'cmd']) {
-      const keys = Object.keys(await get('/' + node + '?shallow=true'));
-      for (const k of keys) if (!active.has(k)) await del('/' + node + '/' + encodeURIComponent(k));
-    }
-    cars = {}; selCar = null; renderCars();
-    $('cleanMsg').textContent = 'Listo: ' + n + ' elementos borrados.';
-    poll();
-  } catch (e) {
-    $('cleanMsg').textContent = 'No se pudo limpiar: ' + e.message;
-  }
-}
-$('cleanBtn').addEventListener('click', cleanLegacy);
-
-$('roomIn').value = room; $('carsIn').value = nCars;
-applyRole();
-$('roomShow').textContent = room || '-';
-init();
-function pollDelay() { const n = Math.max(Object.keys(cars).length, nCars); return n <= 3 ? 3000 : n <= 10 ? 5000 : 8000; }
-function lapsDelay() { const n = Math.max(Object.keys(cars).length, nCars); return n <= 3 ? 15000 : n <= 10 ? 20000 : 30000; }
-async function loop() { await poll(); await pollPending(); await pollCircuits(); setTimeout(loop, pollDelay()); }
-async function lapsLoop() { await pollLaps(); setTimeout(lapsLoop, lapsDelay()); }
-loop();
-setTimeout(lapsLoop, 2500);
-</script>
+        function loadCircuitsRepository() {
+            db.ref('circuits').on('value', snapshot => {
+                const container = document.getElementById('circuits-repository-list');
+                if (!container) return;
+                container.innerHTML = '';
+                const circuits = snapshot.val();
+                if (!circuits) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm italic">No hay circuitos sincronizados.</p>';
+                    return;
+                }
+                Object.keys(circuits).forEach(circuitId => {
+                    const circuit = circuits[circuitId];
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-900 p-4 rounded-lg border border-slate-700';
+                    card.innerHTML = `
+                        <h4 class="font-bold text-white text-sm mb-1">${circuit.name || circuitId}</h4>
+                        <p class="text-xs text-slate-400">Sectores: ${circuit.sectorCount || 'N/D'}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
