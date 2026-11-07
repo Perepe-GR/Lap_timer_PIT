@@ -39,7 +39,7 @@ fun computeRecordsStats(list: List<SessionRecord>, driver: String?): RecordsStat
         }
     }
     val sb = StringBuilder()
-    sb.append("Sesiones: ").append(list.size).append(" · Laps: ").append(laps).append('\n')
+    sb.append("Sessions: ").append(list.size).append(" · Laps: ").append(laps).append('\n')
     if (bestSession != null) {
         sb.append("BEST LAP: ").append(fmtMs(bestMs)).append("  (")
             .append(date.format(Date(bestSession.startEpochMs)))
@@ -51,7 +51,7 @@ fun computeRecordsStats(list: List<SessionRecord>, driver: String?): RecordsStat
             sb.append("S").append(i + 1).append(' ')
                 .append(String.format(Locale.US, "%.2f", bestSectors[i] / 1000.0)).append("   ")
         }
-        sb.append("\nÓptima: ").append(fmtMs(bestSectors.sum()))
+        sb.append("\nOptimal: ").append(fmtMs(bestSectors.sum()))
     }
 
     val perSession = ArrayList<Double>()

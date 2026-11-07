@@ -77,6 +77,10 @@ class LineChartView @JvmOverloads constructor(
         fun px(x: Double) = left + ((x - x0) / (x1 - x0)).toFloat() * (right - left)
         fun py(v: Double) = bottom - ((v - mn) / (mx - mn)).toFloat() * (bottom - top)
 
+        val theme = ThemeManager.getTheme(context)
+        axis.color = theme.cardBg
+        txt.color = theme.muted
+
         canvas.drawLine(left, top, left, bottom, axis)
         canvas.drawLine(left, bottom, right, bottom, axis)
         if (zeroLine && mn < 0.0 && mx > 0.0) canvas.drawLine(left, py(0.0), right, py(0.0), axis)
