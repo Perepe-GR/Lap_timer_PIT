@@ -31,6 +31,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
 
     private val settings = NetSettings(application)
     private val syncClient = EnduranceSyncClient(settings.dbUrl)
+    private val enduranceRepository = EnduranceRepository(application)
 
     private val _uiState = MutableStateFlow(PilotUiState())
     val uiState: StateFlow<PilotUiState> = _uiState.asStateFlow()
@@ -41,10 +42,11 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
     fun startSession(teamCode: String, myPilotId: String) {
         syncJob?.cancel()
         _uiState.value = _uiState.value.copy(pilotId = myPilotId, pilotName = settings.driverName)
+        enduranceRepository.setupDriverPresence(teamCode, myPilotId, "driving")
         syncJob = viewModelScope.launch {
             launch {
-                syncClient.observeSessionState(teamCode).collect { state ->
-                    val isCur = state.currentPilotId == myPilotId
+                syncClient.observeCurrentPilotId(teamCode).collect { curId ->
+                    val isCur = curId.isNotBlank() && (curId == myPilotId || curId == settings.deviceUid)
                     val newStatus = if (isCur) "ON_TRACK" else "RESTING"
                     _uiState.value = _uiState.value.copy(isCurrentPilot = isCur, status = newStatus)
                 }
@@ -65,8 +67,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
             launch {
                 syncClient.observePendingPilots(teamCode).collect { pending ->
                     val req = pending[myPilotId]
-                    val hadReq = pending.isNotEmpty()
-                    if ((req == null && hadReq) || req?.status == "REJECTED") {
+                    if (req?.status != "ACCEPTED") {
                         settings.clearEnduranceSession()
                         _uiState.value = _uiState.value.copy(ejected = true)
                     }
@@ -77,7 +78,10 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
 
     fun leaveSession(teamCode: String, myPilotId: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            runCatching { syncClient.removePilotPresence(teamCode, myPilotId) }
+            runCatching {
+                enduranceRepository.updateDriverStatusAtomic(teamCode, myPilotId, "offline")
+                syncClient.removePilotPresence(teamCode, myPilotId)
+            }
             settings.clearEnduranceSession()
             onComplete()
         }

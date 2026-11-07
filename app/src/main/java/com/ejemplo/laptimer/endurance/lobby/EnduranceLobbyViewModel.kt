@@ -7,14 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.ejemplo.laptimer.NetSettings
 import com.ejemplo.laptimer.endurance.sync.*
 import com.ejemplo.laptimer.firebase.FirebaseAuthManager
-import com.ejemplo.laptimer.util.SecurityUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 data class LobbyUiState(
-    val step: Int = STEP_SETUP,
+    val step: Int = STEP_WAITING,
     val role: String = "PILOT",
     val mode: String = "JOIN",
     val teamCode: String = "",
@@ -39,64 +39,36 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
 
     private val settings = NetSettings(application)
     private val syncClient = EnduranceSyncClient(settings.dbUrl)
+    private val enduranceRepository = EnduranceRepository(application)
 
     private val _uiState = MutableStateFlow(LobbyUiState())
     val uiState: StateFlow<LobbyUiState> = _uiState.asStateFlow()
 
     init {
-        val activeRoom = settings.activeRoomCode
-        val isSessionActive = settings.sessionActive
-        if (isSessionActive && activeRoom.isNotBlank()) {
-            Log.i("EnduranceLobbyVM", "Restoring active pilot session for room: $activeRoom")
-            _uiState.value = _uiState.value.copy(
-                teamCode = activeRoom,
-                role = "PILOT",
-                step = LobbyUiState.STEP_WAITING,
-                myPilotId = settings.deviceUid
-            )
-            startObserving(activeRoom)
-        } else {
-            viewModelScope.launch {
-                val globalRoom = settings.ensureRoom()
-                val globalPin = settings.pin
-                val pilotName = settings.driverName
-                val currentUid = try { FirebaseAuthManager.ensureAuthenticated() } catch (_: Exception) { "pilot-" + System.currentTimeMillis() }
-                joinTeam(globalRoom, globalPin, currentUid, pilotName)
-            }
+        // Strict real-time validation: always enter waiting room and listen to Firebase request status (/rooms/{teamName}/requests/{deviceId}/status)
+        val globalRoom = settings.ensureRoom()
+        val pilotName = settings.driverName
+        val currentUid = try {
+            runBlocking { FirebaseAuthManager.ensureAuthenticated() }
+        } catch (_: Exception) {
+            "pilot-" + System.currentTimeMillis()
         }
-    }
+        settings.deviceUid = currentUid
 
-    fun joinTeam(code: String, inputPin: String, pilotId: String, pilotName: String) {
+        _uiState.value = _uiState.value.copy(
+            teamCode = globalRoom,
+            teamName = globalRoom,
+            myPilotId = currentUid,
+            step = LobbyUiState.STEP_WAITING
+        )
+
+        enduranceRepository.setupDriverPresence(globalRoom, currentUid, "driving")
+
         viewModelScope.launch {
-            val cleanCode = code.trim().uppercase()
-            val metaRes = syncClient.fetchTeamMeta(cleanCode)
-            val meta = metaRes.getOrNull()
-            if (meta == null) {
-                _uiState.value = _uiState.value.copy(pin = "", error = "Incorrect PIN or room not found")
-                return@launch
+            runCatching {
+                syncClient.requestJoin(globalRoom, currentUid, pilotName, currentUid)
             }
-            val isValidPin = if (meta.pinHash.isNotBlank()) {
-                SecurityUtils.verifyPin(inputPin, meta.salt, meta.pinHash)
-            } else {
-                meta.code == inputPin.trim()
-            }
-            if (!isValidPin) {
-                _uiState.value = _uiState.value.copy(pin = "", error = "Incorrect PIN or room not found")
-                return@launch
-            }
-            val joinRes = syncClient.joinTeam(cleanCode, inputPin, pilotId, pilotName)
-            if (joinRes.isSuccess) {
-                val uid = pilotId.ifBlank { FirebaseAuthManager.ensureAuthenticated() }
-                settings.saveEnduranceSession(cleanCode, "PILOT", uid)
-                _uiState.value = _uiState.value.copy(
-                    teamCode = cleanCode, teamName = meta.name, circuitId = meta.circuitId,
-                    myPilotId = uid, pin = inputPin.trim(), step = LobbyUiState.STEP_WAITING, error = null
-                )
-                startObserving(cleanCode)
-            } else {
-                val err = joinRes.exceptionOrNull()
-                _uiState.value = _uiState.value.copy(pin = "", error = "Connection error or timeout: ${err?.message}")
-            }
+            startObserving(globalRoom, currentUid)
         }
     }
 
@@ -105,7 +77,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         _uiState.value = LobbyUiState()
     }
 
-    private fun startObserving(code: String) {
+    private fun startObserving(code: String, myId: String) {
         viewModelScope.launch {
             syncClient.observePilots(code).collect { pilots ->
                 _uiState.value = _uiState.value.copy(pilots = pilots)
@@ -119,18 +91,21 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             syncClient.observePendingPilots(code).collect { pending ->
                 _uiState.value = _uiState.value.copy(pendingPilots = pending)
-                val myId = _uiState.value.myPilotId
                 if (_uiState.value.step == LobbyUiState.STEP_WAITING && myId.isNotBlank()) {
                     val myReq = pending[myId]
-                    val hadReq = _uiState.value.pendingPilots.containsKey(myId)
-                    if (myReq?.status == "REJECTED" || (hadReq && myReq == null)) {
-                        settings.clearEnduranceSession()
-                        _uiState.value = LobbyUiState(
-                            step = LobbyUiState.STEP_SETUP,
-                            error = "You have been removed from the team by the Crew Chief."
-                        )
-                    } else if (myReq?.status == "ACCEPTED") {
-                        _uiState.value = _uiState.value.copy(navigateToSession = "PILOT")
+                    val status = myReq?.status ?: ""
+                    when {
+                        status == "ACCEPTED" -> {
+                            settings.saveEnduranceSession(code, "PILOT", myId)
+                            _uiState.value = _uiState.value.copy(navigateToSession = "PILOT")
+                        }
+                        status == "REJECTED" || (pending.isNotEmpty() && myReq == null) -> {
+                            settings.clearEnduranceSession()
+                            _uiState.value = LobbyUiState(
+                                step = LobbyUiState.STEP_SETUP,
+                                error = "Access rejected or removed by Crew Chief."
+                            )
+                        }
                     }
                 }
             }

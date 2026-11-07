@@ -30,7 +30,17 @@ class NetSettings(context: Context) {
     // ---- Endurance Session Persistence ----
     var activeRoomCode: String get() = p.getString("activeRoomCode", "") ?: ""; set(v) = store.putS("activeRoomCode", v.trim().uppercase())
     var userRole: String get() = p.getString("userRole", "") ?: ""; set(v) = store.putS("userRole", v)
-    var deviceUid: String get() = p.getString("deviceUid", "") ?: ""; set(v) = store.putS("deviceUid", v)
+    var deviceUid: String
+        get() {
+            var uid = p.getString("deviceUid", "") ?: ""
+            if (uid.isBlank()) {
+                val model = android.os.Build.MODEL?.replace(Regex("[^a-zA-Z0-9]"), "_") ?: "device"
+                uid = "dev_${model}_${java.util.UUID.randomUUID().toString().substring(0, 8)}"
+                store.putS("deviceUid", uid)
+            }
+            return uid
+        }
+        set(v) = store.putS("deviceUid", v)
     var sessionActive: Boolean get() = p.getBoolean("sessionActive", false); set(v) = store.putB("sessionActive", v)
 
     fun clearEnduranceSession() {

@@ -313,6 +313,22 @@
             }, err => {
                 console.warn('Error reading pending:', err);
             });
+            db.ref(`rooms/${teamName}/pilots`).on('value', snapshot => {
+                window.teamPilotsData = snapshot.val();
+                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
+                    renderAcceptedPilots(teamName, snap.val());
+                });
+            }, err => {
+                console.warn('Error reading pilots:', err);
+            });
+            db.ref(`rooms/${teamName}/drivers`).on('value', snapshot => {
+                window.teamDriversData = snapshot.val();
+                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
+                    renderAcceptedPilots(teamName, snap.val());
+                });
+            }, err => {
+                console.warn('Error reading drivers:', err);
+            });
             db.ref(`rooms/${teamName}/session/currentPilotId`).on('value', snapshot => {
                 window.currentActiveDriverId = snapshot.val();
                 // Re-render accepted list to highlight current driver
@@ -411,6 +427,13 @@
                         if (t.splits[2]) s3 = formatMs(t.splits[2]);
                     }
 
+                    let pilotInfo = (window.teamPilotsData && (window.teamPilotsData[carId] || window.teamPilotsData[driverName])) || {};
+                    let pilotStatus = (pilotInfo.info && pilotInfo.info.status) || 'ONLINE';
+                    let lastSeen = (pilotInfo.info && pilotInfo.info.lastSeenTs) || t.timestamp || t.t || Date.now();
+                    let isOffline = (pilotStatus.toLowerCase() === 'offline' || pilotStatus.toLowerCase() === 'disconnected' || (Date.now() - lastSeen > 35000));
+                    let dotColor = isOffline ? 'bg-red-500' : 'bg-emerald-500 animate-pulse';
+                    let titleText = isOffline ? 'Offline / Disconnected' : 'Telemetry Live';
+
                     tr.innerHTML = `
                         <td class="p-3">
                             <div class="font-bold text-white">${carName}</div>
@@ -427,7 +450,7 @@
                             <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s3}</span>
                         </td>
                         <td class="p-3 text-center">
-                            <span class="inline-block w-3 h-3 rounded-full bg-emerald-500 animate-pulse" title="Telemetry Live"></span>
+                            <span class="inline-block w-3 h-3 rounded-full ${dotColor}" title="${titleText}"></span>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -495,15 +518,26 @@
                     if (req && typeof req === 'object' && req.status === 'ACCEPTED') {
                         count++;
                         const isDriving = (window.currentActiveDriverId === driverId);
+
+                        let pilotData = (window.teamPilotsData && window.teamPilotsData[driverId]) || {};
+                        let pilotInfo = pilotData.info || {};
+                        let driverStatus = pilotInfo.status || 'READY';
+                        let lastSeen = pilotInfo.lastSeenTs || req.requestedAt || 0;
+                        let isOffline = (driverStatus.toLowerCase() === 'offline' || driverStatus.toLowerCase() === 'disconnected' || (Date.now() - lastSeen > 35000));
+
+                        let dotColor = isOffline ? 'bg-red-500' : (isDriving ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-500');
+                        let statusText = isOffline ? 'Offline' : (isDriving ? 'Driving (On Track)' : driverStatus);
+
                         const card = document.createElement('div');
-                        card.className = `p-3 rounded-lg border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${isDriving ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-900 border-slate-700'}`;
+                        card.className = `p-3 rounded-lg border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${isOffline ? 'bg-slate-950/60 border-red-900/60' : (isDriving ? 'bg-emerald-950/40 border-emerald-500' : 'bg-slate-900 border-slate-700')}`;
                         card.innerHTML = `
                             <div>
                                 <div class="flex items-center gap-2">
+                                    <span class="inline-block w-2.5 h-2.5 rounded-full ${dotColor}" title="${statusText}"></span>
                                     <p class="font-bold text-white text-sm">${req.name || driverId}</p>
                                     ${isDriving ? '<span class="bg-emerald-500 text-slate-950 text-xs font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">DRIVING</span>' : ''}
                                 </div>
-                                <p class="text-xs text-slate-400">ID: ${req.id || driverId} · Status: Accepted</p>
+                                <p class="text-xs text-slate-400">ID: ${req.id || driverId} · Status: <span class="${isOffline ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}">${statusText}</span></p>
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button onclick="assignDriverToCar('${teamName}', '${driverId}', '${req.name || driverId}')" class="bg-cyan-600 hover:bg-cyan-700 px-3 py-1.5 rounded text-xs font-bold text-white shadow transition-colors">

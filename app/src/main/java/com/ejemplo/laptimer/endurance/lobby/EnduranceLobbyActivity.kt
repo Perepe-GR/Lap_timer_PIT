@@ -96,7 +96,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
 
                 if (state.step != currentStep) {
                     currentStep = state.step
-                    val fragment = if (state.step == LobbyUiState.STEP_SETUP) JoinTeamFragment() else WaitingRoomFragment()
+                    val fragment = WaitingRoomFragment()
                     supportFragmentManager.beginTransaction()
                         .replace(container.id, fragment)
                         .commit()

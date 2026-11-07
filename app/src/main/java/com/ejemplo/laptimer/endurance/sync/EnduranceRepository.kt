@@ -100,4 +100,37 @@ class EnduranceRepository(
         flushQueue(code, pilotId)
         scheduleConnectedSync(code, pilotId)
     }
+
+    fun setupDriverPresence(roomCode: String, deviceUid: String, initialStatus: String = "driving") {
+        try {
+            val dbUrl = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
+            val database = com.google.firebase.database.FirebaseDatabase.getInstance(dbUrl)
+            val driverStatusRef = database.getReference("rooms/$roomCode/drivers/$deviceUid/status")
+            driverStatusRef.setValue(initialStatus)
+            driverStatusRef.onDisconnect().setValue("offline")
+
+            val pilotStatusRef = database.getReference("rooms/$roomCode/pilots/$deviceUid/info/status")
+            pilotStatusRef.setValue(initialStatus.uppercase())
+            pilotStatusRef.onDisconnect().setValue("OFFLINE")
+        } catch (e: Exception) {
+            // Ignore
+        }
+    }
+
+    suspend fun updateDriverStatusAtomic(roomCode: String, deviceUid: String, status: String) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val dbUrl = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
+                val database = com.google.firebase.database.FirebaseDatabase.getInstance(dbUrl)
+                val updates = mapOf(
+                    "rooms/$roomCode/drivers/$deviceUid/status" to status,
+                    "rooms/$roomCode/pilots/$deviceUid/info/status" to status.uppercase(),
+                    "rooms/$roomCode/pilots/$deviceUid/info/lastSeenTs" to System.currentTimeMillis()
+                )
+                database.reference.updateChildren(updates)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+    }
 }
