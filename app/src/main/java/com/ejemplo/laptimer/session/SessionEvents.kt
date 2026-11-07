@@ -9,7 +9,11 @@ import com.ejemplo.laptimer.logic.*
 fun MainActivity.showPitMessages(list: List<PitMessage>) {
     if (list.isEmpty()) return
     val now = SystemClock.elapsedRealtime()
-    for (m in list) activeMsgs.add(ActiveMsg(m.text, m.bg, settings.msgSectors, now))
+    for (m in list) {
+        if (activeMsgs.none { it.text == m.text }) {
+            activeMsgs.add(ActiveMsg(m.text, m.bg, settings.msgSectors, now))
+        }
+    }
     renderBottom()
 }
 

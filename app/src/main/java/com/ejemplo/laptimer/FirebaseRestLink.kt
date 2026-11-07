@@ -26,6 +26,7 @@ class FirebaseRestLink(
     private var lastKey: String? = null
     private var lastCmdId: String? = null
     private var lastInstTime = 0L
+    private var lastInstFingerprint: String? = null
     private var first = true
     private var purged = false
 
@@ -140,15 +141,17 @@ class FirebaseRestLink(
         try {
             val room = settings.room.ifBlank { settings.ensureRoom() }
             val txt = request("GET", "rooms/$room/instructions", null, "").trim()
-            if (txt.isNotEmpty() && txt != "null") {
+            if (txt.isNotEmpty() && txt != "null" && txt.startsWith("{")) {
                 val obj = JSONObject(txt)
                 val text = obj.optString("text", "").ifBlank { obj.optString("message", "") }
                 val bg = obj.optString("bg", "amarillo")
                 val flag = obj.optString("flag", "")
-                val t = obj.optLong("t", obj.optLong("timestamp", System.currentTimeMillis()))
-                if (text.isNotBlank() && (lastInstTime == 0L || t > lastInstTime)) {
-                    lastInstTime = t
-                    onMessages(listOf(PitMessage("inst-$t", text, bg, flag)))
+                val t = obj.optLong("t", obj.optLong("timestamp", 0L))
+                val fingerprint = "$t:$text:$bg:$flag"
+                if (text.isNotBlank() && fingerprint != lastInstFingerprint) {
+                    lastInstFingerprint = fingerprint
+                    val msgId = if (t > 0L) "inst-$t" else "inst-${fingerprint.hashCode()}"
+                    onMessages(listOf(PitMessage(msgId, text, bg, flag)))
                 }
             }
         } catch (_: Exception) {}

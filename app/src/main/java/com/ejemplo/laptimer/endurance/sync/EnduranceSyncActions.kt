@@ -64,6 +64,7 @@ fun EnduranceSyncClient.observeStrategy(code: String): Flow<StrategyBase> = flow
 }
 
 fun EnduranceSyncClient.observeInstructions(code: String, carKey: String): Flow<EnduranceSyncClient.TacticalInstruction?> = flow {
+    var lastEmittedFingerprint: String? = null
     while (true) {
         runCatching {
             val res = request("GET", "rooms/$code/instructions")
@@ -75,20 +76,27 @@ fun EnduranceSyncClient.observeInstructions(code: String, carKey: String): Flow<
                     val bgVal = obj.optString("bg", "amarillo")
                     val flagVal = obj.optString("flag", "")
                     val tVal = obj.optLong("t", obj.optLong("timestamp", 0L))
+                    val fingerprint = "$tVal:$textVal:$bgVal:$flagVal"
                     if (textVal.isNotBlank()) {
-                        emit(EnduranceSyncClient.TacticalInstruction(
-                            text = textVal,
-                            bg = bgVal,
-                            flag = flagVal,
-                            t = tVal
-                        ))
+                        if (fingerprint != lastEmittedFingerprint) {
+                            lastEmittedFingerprint = fingerprint
+                            emit(EnduranceSyncClient.TacticalInstruction(
+                                text = textVal,
+                                bg = bgVal,
+                                flag = flagVal,
+                                t = tVal
+                            ))
+                        }
                     } else {
+                        lastEmittedFingerprint = null
                         emit(null)
                     }
                 } else {
+                    lastEmittedFingerprint = null
                     emit(null)
                 }
             } else {
+                lastEmittedFingerprint = null
                 emit(null)
             }
         }
