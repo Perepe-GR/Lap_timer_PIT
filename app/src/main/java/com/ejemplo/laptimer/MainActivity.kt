@@ -150,6 +150,9 @@ class MainActivity : AppCompatActivity() {
 
         intent.getStringExtra("recon")?.let { startRecon(it) }
         if (intent.getBooleanExtra("demo", false)) startDemo()
+        if (intent.getBooleanExtra("pitlaneActive", false)) {
+            enterPit()
+        }
 
         showTopBar()
     }

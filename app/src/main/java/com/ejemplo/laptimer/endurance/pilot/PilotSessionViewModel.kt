@@ -38,6 +38,24 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
 
     private var syncJob: Job? = null
     private var highSpeedCount = 0
+    private var countdownJob: Job? = null
+
+    val remainingSeconds = MutableStateFlow(1800) // 30 minutes default
+
+    init {
+        startCountdown(30)
+    }
+
+    fun startCountdown(minutes: Int) {
+        countdownJob?.cancel()
+        remainingSeconds.value = minutes * 60
+        countdownJob = viewModelScope.launch {
+            while (remainingSeconds.value > 0) {
+                kotlinx.coroutines.delay(1000L)
+                remainingSeconds.value--
+            }
+        }
+    }
 
     fun startSession(teamCode: String, myPilotId: String) {
         syncJob?.cancel()
@@ -55,6 +73,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
                 syncClient.observeStrategy(teamCode).collect { strat ->
                     if (strat.stintMinutes > 0) {
                         _uiState.value = _uiState.value.copy(estimatedStintMinutes = strat.stintMinutes)
+                        startCountdown(strat.stintMinutes)
                     }
                 }
             }
