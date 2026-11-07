@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2026-11-08
+
+### Added
+- Official Data Contract Migration (`/rooms/{roomCode}/devices/{deviceUid}/`):
+  - Created isolated, atomic hardware device routes under `/rooms/{roomCode}/devices/{deviceUid}/` storing `deviceName`, `status` ("driving", "pit", "offline"), and `lastSeenTs`.
+- Unique Installation Device Identity (`deviceUid`):
+  - Enforced unique, installation-persistent device identity (`device-{MODEL}-{UUID}`) in `NetSettings.kt` and ViewModels (`EnduranceLobbyViewModel`, `PilotSessionViewModel`), eliminating device UID collisions across emulators and multiple hardware units.
+- Real-Time Firebase Presence & `onDisconnect()` Synchronization:
+  - Integrated `FirebaseDatabase` `.onDisconnect().setValue("offline")` for instant server-side presence updates upon sudden network drops or airplane mode activations.
+  - Added atomic device status updates via `updateDeviceStatusAtomic` on `Dispatchers.IO`.
+- Web Dashboard Presence Integration (`pit-panel/index.html`):
+  - Updated JS listeners for `/rooms/{teamName}/devices` and `/pilots`.
+  - Added dynamic status light indicators (Green/Emerald for Online/Driving, Yellow for Pit, Red/Grey for Offline/Disconnected or stale `lastSeenTs`).
+- Endurance Cockpit UI Refinements (`PilotSessionActivity.kt`):
+  - Completely removed top tactical message banner from standby cockpit view.
+  - Implemented dynamic countdown timer with green background (`#16A34A`) counting down stint time to kart entry (holding at `00:00:00` at zero).
+  - Prominent "I'M IN THE CAR / READY TO DRIVE" button launching driving layout (`MainActivity`) with pitlane banner active (`pitlaneActive = true`).
+  - Out-of-car exit procedure with "I'VE EXITED THE VEHICLE" confirmation button transitioning screen to red resting/finished state (`#EF4444`).
+- Multi-GPS Source Fixes (`MainPermissionsHandler.kt` & `GpsLocationManager.kt`):
+  - Fixed internal phone GPS and external Bluetooth GPS sources (RaceBox, Dragy, Garmin) to prevent false "No GPS signal" alerts and lap invalidations caused by USB serial checks.
+  - Added resilient provider selection (`GPS_PROVIDER`, `NETWORK_PROVIDER`) with safe exception fallback.
+- Robust JSON Safe Parsing (`EnduranceSyncExtensions.kt`):
+  - Protected all network response JSON parsers with inner `try/catch` and `optJSONObject` to handle non-JSON / HTML gateway error payloads gracefully.
+
+### Changed
+- Upgraded version to 2.4.0 (`versionCode = 125`, `versionName = "2.4.0"`) in `build.gradle.kts`, `version.properties`, `Races.kt`, `HomeUiBuilder.kt`, and `MainDemoController.kt`.
+
 ## [2.3.0] - 2026-11-06
 
 ### Added

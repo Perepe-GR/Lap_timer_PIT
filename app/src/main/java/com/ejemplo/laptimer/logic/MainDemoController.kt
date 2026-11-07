@@ -34,7 +34,7 @@ fun MainActivity.buildTelemetry(): String? {
     if (!hasFix && !demoActive) return null
     val o = JSONObject()
     val s = stint
-    o.put("version", "V2.3.0")
+    o.put("version", "V2.4.0")
     o.put("t", System.currentTimeMillis())
     o.put("lat", lastLat)
     o.put("lon", lastLon)

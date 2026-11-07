@@ -1,4 +1,4 @@
-# PROJECT_MAP.md — LapTimer v2.3.0
+# PROJECT_MAP.md — LapTimer v2.4.0
 
 ## Architecture Overview
 The project follows a modular, single-responsibility architecture across clean subpackages:

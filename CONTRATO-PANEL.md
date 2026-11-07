@@ -1,13 +1,13 @@
-# Contrato Técnico: Comunicación App Android ⇄ Panel Pit Web (`CONTRATO-PANEL.md` - V2.3.0)
+# Contrato Técnico: Comunicación App Android ⇄ Panel Pit Web (`CONTRATO-PANEL.md` - V2.4.0)
 
-Este documento define el protocolo entre la app Android `LapTimer` (V2.3.0) y el panel pit web (Pit Wall): rutas de Firebase Realtime Database, estructura de datos JSON, ciclos de vida, sincronización offline, autenticación anónima, validaciones estrictas y roles. El panel debe implementarse estrictamente según este contrato.
+Este documento define el protocolo entre la app Android `LapTimer` (V2.4.0) y el panel pit web (Pit Wall): rutas de Firebase Realtime Database, estructura de datos JSON, ciclos de vida, sincronización offline, autenticación anónima, validaciones estrictas y roles. El panel debe implementarse estrictamente según este contrato.
 
 ---
 
 ## 1. Versión
 
-- **Versión de la app:** `"V2.3.0"` (`versionName` en `app/build.gradle.kts`).
-- **Campo de versión:** los payloads `live`, `laps` y `races` incluyen obligatoriamente `"version": "V2.3.0"`.
+- **Versión de la app:** `"V2.4.0"` (`versionName` en `app/build.gradle.kts`).
+- **Campo de versión:** los payloads `live`, `laps` y `races` incluyen obligatoriamente `"version": "V2.4.0"`.
 - **Independencia del panel:** el panel web (`pit-panel/index.html`) opera sobre este contrato de sincronización.
 
 ---
@@ -37,6 +37,7 @@ Este documento define el protocolo entre la app Android `LapTimer` (V2.3.0) y el
 | Ruta | Escritura | Lectura | Propósito |
 | --- | --- | --- | --- |
 | `meta` | App (al crear la sala) | Panel y app | Metadatos de la sala, `leaderUid`, `pinHash` y `salt` |
+| `devices/{deviceUid}` | App / Servidor | Panel y app | Estado en tiempo real del hardware (`deviceName`, `status`, `lastSeenTs`) |
 | `members/{uid}` | App y panel (al unirse) | Panel y app | Miembros activos con rol (`pilot` o `crew_chief`) |
 | `requests/{deviceUid}` | App (piloto) / Panel (jefe) | Panel y app | Solicitudes de acceso indexadas por `deviceUid` |
 | `pending/{deviceUid}` | App (piloto) / Panel (jefe) | Panel y app | Cola de solicitudes pendientes de aprobación |
