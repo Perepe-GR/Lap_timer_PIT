@@ -75,13 +75,13 @@ fun MainActivity.batteryPct(): Int {
 fun MainActivity.computeAlert(): Pair<String, Boolean>? {
     val now = SystemClock.elapsedRealtime()
     if (!demoActive) {
-        val internalGps = settings.gpsSource == "internal"
-        val activeConnected = if (internalGps) (hasFix || now - lastDataAt < 10_000L) else (usbSerialManager.isConnected && now - lastDataAt < 5_000L)
+        val isUsbSource = settings.gpsSource == "usb"
+        val activeConnected = if (isUsbSource) (usbSerialManager.isConnected && now - lastDataAt < 5_000L) else (hasFix || now - lastDataAt < 10_000L)
         if (!activeConnected) {
             engine?.invalidateCurrentLap()
             return Pair("No GPS signal", true)
         }
-        if (!internalGps && now - lastFixAt > 5_000L) {
+        if (isUsbSource && now - lastFixAt > 5_000L) {
             engine?.invalidateCurrentLap()
             return Pair("No GPS signal", true)
         }
