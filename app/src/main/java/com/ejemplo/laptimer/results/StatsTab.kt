@@ -1,7 +1,6 @@
 package com.ejemplo.laptimer.results
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.view.View
 import android.widget.LinearLayout
@@ -16,15 +15,16 @@ class StatsTab(
     private val txtStats: TextView
 
     init {
-        val pad = (16 * context.resources.displayMetrics.density).toInt()
+        val theme = ThemeManager.getTheme(context)
+        val pad = (14 * context.resources.displayMetrics.density).toInt()
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(0xFF0B0D10.toInt())
-        root.setPadding(pad, pad, pad, pad)
+        root.setBackgroundColor(theme.bg)
+        root.setPadding(pad, pad / 2, pad, pad)
 
         txtStats = TextView(context)
-        txtStats.setTextColor(Color.WHITE)
-        txtStats.textSize = 15f
+        txtStats.setTextColor(theme.text)
+        txtStats.textSize = 14f
         txtStats.typeface = Typeface.MONOSPACE
         root.addView(txtStats)
         view = root
@@ -33,10 +33,11 @@ class StatsTab(
     }
 
     fun reload() {
+        val theme = ThemeManager.getTheme(context)
         val list = store.list()
         if (list.isEmpty()) {
             txtStats.text = "No overall statistics available yet. Complete sessions to view records and optimal laps."
-            txtStats.setTextColor(0xFF9AA3AE.toInt())
+            txtStats.setTextColor(theme.muted)
             return
         }
         val circuits = list.map { it.circuitName }.distinct().sorted()
@@ -52,6 +53,6 @@ class StatsTab(
             sb.append(stats.infoText).append("\n\n")
         }
         txtStats.text = sb.toString().trimEnd()
-        txtStats.setTextColor(Color.WHITE)
+        txtStats.setTextColor(theme.text)
     }
 }

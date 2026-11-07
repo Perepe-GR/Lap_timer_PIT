@@ -2,7 +2,6 @@ package com.ejemplo.laptimer.results
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -25,16 +24,18 @@ class HistoryTab(
     private var sessions: List<SessionRecord> = emptyList()
 
     init {
-        val pad = (16 * context.resources.displayMetrics.density).toInt()
+        val theme = ThemeManager.getTheme(context)
+        val pad = (14 * context.resources.displayMetrics.density).toInt()
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(0xFF0B0D10.toInt())
-        root.setPadding(0, pad / 2, 0, 0)
+        root.setBackgroundColor(theme.bg)
+        root.setPadding(pad, pad / 2, pad, pad)
 
         empty = TextView(context)
         empty.text = "No saved sessions yet. Sessions are recorded automatically when driving on an active circuit."
-        empty.setTextColor(0xFF9AA3AE.toInt())
-        empty.setPadding(pad, pad, pad, 0)
+        empty.setTextColor(theme.muted)
+        empty.textSize = 14f
+        empty.setPadding(0, pad, 0, 0)
         root.addView(empty)
 
         list = ListView(context)

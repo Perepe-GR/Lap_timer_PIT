@@ -1,7 +1,6 @@
 package com.ejemplo.laptimer.results
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.view.View
 import android.view.ViewGroup
@@ -26,10 +25,11 @@ class RecordsTab(
     private val chart: LineChartView
 
     init {
+        val theme = ThemeManager.getTheme(context)
         val pad = (14 * context.resources.displayMetrics.density).toInt()
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(0xFF0B0D10.toInt())
+        root.setBackgroundColor(theme.bg)
         root.setPadding(pad, pad / 2, pad, pad)
 
         sessions = store.list()
@@ -38,7 +38,8 @@ class RecordsTab(
         if (circuits.isEmpty()) {
             val t = TextView(context)
             t.text = "No saved sessions yet. Records are computed from real session logs."
-            t.setTextColor(0xFF9AA3AE.toInt())
+            t.setTextColor(theme.muted)
+            t.textSize = 14f
             t.setPadding(0, pad, 0, 0)
             root.addView(t)
             view = root
@@ -57,7 +58,7 @@ class RecordsTab(
             root.addView(row)
 
             txtInfo = TextView(context)
-            txtInfo.setTextColor(Color.WHITE)
+            txtInfo.setTextColor(theme.text)
             txtInfo.textSize = 14f
             txtInfo.setPadding(0, pad / 2, 0, pad / 2)
             root.addView(txtInfo)
@@ -66,7 +67,7 @@ class RecordsTab(
             lbl.text = "BEST LAP PER SESSION (s): green = each session, white = best so far"
             lbl.textSize = 12f
             lbl.typeface = Typeface.DEFAULT_BOLD
-            lbl.setTextColor(0xFF9AA3AE.toInt())
+            lbl.setTextColor(theme.muted)
             root.addView(lbl)
 
             chart = LineChartView(context)
@@ -118,6 +119,7 @@ class RecordsTab(
     }
 
     private fun refresh() {
+        val theme = ThemeManager.getTheme(context)
         if (circuits.isEmpty()) return
         val c = circuits[spCircuit.selectedItemPosition.coerceIn(0, circuits.size - 1)]
         val idx = spScope.selectedItemPosition
@@ -141,7 +143,7 @@ class RecordsTab(
         chart.setData(
             xs,
             listOf(stats.perSession.toDoubleArray(), stats.soFar.toDoubleArray()),
-            intArrayOf(0xFFC6F432.toInt(), Color.WHITE),
+            intArrayOf(theme.accent, theme.text),
             false,
             " ses."
         )

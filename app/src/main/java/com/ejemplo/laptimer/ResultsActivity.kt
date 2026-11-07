@@ -1,11 +1,9 @@
 package com.ejemplo.laptimer
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -44,10 +42,11 @@ class ResultsActivity : AppCompatActivity() {
         recordsTab = RecordsTab(this, store)
         statsTab = StatsTab(this, store)
 
+        val theme = ThemeManager.getTheme(this)
         val pad = (14 * resources.displayMetrics.density).toInt()
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(Color.parseColor("#0B0D10"))
+        root.setBackgroundColor(theme.bg)
         root.setPadding(pad, pad, pad, pad)
 
         // Title & Back Row
@@ -59,7 +58,7 @@ class ResultsActivity : AppCompatActivity() {
         back.text = "‹  BACK"
         back.textSize = 15f
         back.typeface = Typeface.DEFAULT_BOLD
-        back.setTextColor(Color.parseColor("#C6F432"))
+        back.setTextColor(theme.accent)
         back.setPadding(0, 0, pad, 0)
         back.setOnClickListener { finish() }
         titleRow.addView(back)
@@ -68,7 +67,7 @@ class ResultsActivity : AppCompatActivity() {
         title.text = "Results"
         title.textSize = 20f
         title.typeface = Typeface.DEFAULT_BOLD
-        title.setTextColor(Color.WHITE)
+        title.setTextColor(theme.text)
         titleRow.addView(title)
         root.addView(titleRow)
 
@@ -139,14 +138,15 @@ class ResultsActivity : AppCompatActivity() {
     }
 
     private fun updateTabStyles() {
+        val theme = ThemeManager.getTheme(this)
         val radius = (10 * resources.displayMetrics.density)
         for ((i, btn) in tabButtons.withIndex()) {
             val selected = i == activeTab
             val g = GradientDrawable()
-            g.setColor(if (selected) Color.parseColor("#C6F432") else Color.parseColor("#12161B"))
+            g.setColor(if (selected) theme.accent else theme.cardBg)
             g.cornerRadius = radius
             btn.background = g
-            btn.setTextColor(if (selected) Color.parseColor("#0B0D10") else Color.WHITE)
+            btn.setTextColor(if (selected) theme.bg else theme.text)
         }
     }
 }
