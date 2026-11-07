@@ -46,18 +46,29 @@ class GpsLocationManager(
         internalLocationListener = listener
 
         try {
-            val provider = if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                LocationManager.GPS_PROVIDER
-            } else {
-                LocationManager.NETWORK_PROVIDER
+            val providers = try { locationManager.getProviders(true) } catch (_: Exception) { emptyList<String>() }
+            val provider = when {
+                providers.contains(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+                providers.contains(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+                providers.isNotEmpty() -> providers[0]
+                else -> LocationManager.GPS_PROVIDER
             }
             locationManager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
-            onStatus("Esperando señal GPS...")
+            onStatus("Esperando señal GPS ($provider)...")
             return true
         } catch (e: SecurityException) {
             onStatus("Permiso de ubicación denegado")
             return false
         } catch (e: Exception) {
+            try {
+                for (p in locationManager.allProviders) {
+                    try {
+                        locationManager.requestLocationUpdates(p, 0L, 0f, listener, Looper.getMainLooper())
+                        onStatus("Esperando señal GPS ($p)...")
+                        return true
+                    } catch (_: Exception) {}
+                }
+            } catch (_: Exception) {}
             onStatus("Error GPS: ${e.message}")
             return false
         }
@@ -65,7 +76,9 @@ class GpsLocationManager(
 
     fun disconnect() {
         internalLocationListener?.let {
-            locationManager.removeUpdates(it)
+            try {
+                locationManager.removeUpdates(it)
+            } catch (_: Exception) {}
             internalLocationListener = null
         }
     }
