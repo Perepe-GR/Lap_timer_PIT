@@ -108,7 +108,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 settings.salt = hashResult.salt
                 settings.intervalS = current.intervalS
 
-                // Synchronize to Firebase if enabled using Dual-Write Authentication
+                // Synchronize to Firebase if telemetry/pitwall integration is enabled
                 if (current.enabled) {
                     syncTeamToFirebase(teamName, hashResult)
                 }
@@ -124,8 +124,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     private suspend fun syncTeamToFirebase(teamName: String, hashResult: PinHashResult) = withContext(Dispatchers.IO) {
-        val token = FirebaseAuthManager.getIdToken()
-        val authQuery = if (!token.isNullOrBlank()) "?auth=$token" else ""
+        val uid = runCatching { FirebaseAuthManager.ensureAuthenticated() }.getOrDefault("anon")
+        var token = FirebaseAuthManager.getIdToken()
         val dbUrl = settings.dbUrl.trimEnd('/')
 
         val teamPayload = JSONObject().apply {
@@ -138,41 +138,52 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         val metaPayload = JSONObject().apply {
             put("code", teamName)
             put("name", teamName)
+            put("circuitId", "Circuit 1")
+            put("createdBy", uid)
+            put("createdAt", System.currentTimeMillis())
             put("pinHash", hashResult.pinHash)
             put("salt", hashResult.salt)
+            put("leaderUid", uid)
+            put("mode", "endurance")
             put("updatedAt", System.currentTimeMillis())
         }.toString()
 
-        // 1. Dual-write to /teams/{teamName}
-        val urlTeams = URL("$dbUrl/teams/$teamName.json$authQuery")
-        val connTeams = urlTeams.openConnection() as HttpURLConnection
-        try {
-            connTeams.requestMethod = "PUT"
-            connTeams.connectTimeout = 5000
-            connTeams.readTimeout = 5000
-            connTeams.doOutput = true
-            connTeams.setRequestProperty("Content-Type", "application/json")
-            connTeams.outputStream.use { it.write(teamPayload.toByteArray(Charsets.UTF_8)) }
-            val code = connTeams.responseCode
-            if (code !in 200..299) throw IOException("HTTP $code")
-        } finally {
-            connTeams.disconnect()
+        fun putEndpoint(path: String, payload: String): Int {
+            val authQuery = if (!token.isNullOrBlank()) "?auth=$token" else ""
+            val url = URL("$dbUrl/$path.json$authQuery")
+            val conn = url.openConnection() as HttpURLConnection
+            return try {
+                conn.requestMethod = "PUT"
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                conn.responseCode
+            } catch (_: Exception) {
+                -1
+            } finally {
+                conn.disconnect()
+            }
         }
 
-        // 2. Dual-write to /rooms/{teamName}/meta
-        val urlRooms = URL("$dbUrl/rooms/$teamName/meta.json$authQuery")
-        val connRooms = urlRooms.openConnection() as HttpURLConnection
-        try {
-            connRooms.requestMethod = "PUT"
-            connRooms.connectTimeout = 5000
-            connRooms.readTimeout = 5000
-            connRooms.doOutput = true
-            connRooms.setRequestProperty("Content-Type", "application/json")
-            connRooms.outputStream.use { it.write(metaPayload.toByteArray(Charsets.UTF_8)) }
-            val code = connRooms.responseCode
-            if (code !in 200..299) throw IOException("HTTP $code")
-        } finally {
-            connRooms.disconnect()
+        // Write to /rooms/{teamName}/meta with automatic token refresh on 401
+        var codeRooms = putEndpoint("rooms/$teamName/meta", metaPayload)
+        if (codeRooms == 401) {
+            token = FirebaseAuthManager.getIdToken()
+            codeRooms = putEndpoint("rooms/$teamName/meta", metaPayload)
+        }
+
+        // Write to /teams/{teamName} with automatic token refresh on 401
+        var codeTeams = putEndpoint("teams/$teamName", teamPayload)
+        if (codeTeams == 401) {
+            token = FirebaseAuthManager.getIdToken()
+            codeTeams = putEndpoint("teams/$teamName", teamPayload)
+        }
+
+        // Ignore 401/403 permission errors when room is already registered under a different leader
+        if (codeRooms !in 200..299 && codeRooms != 401 && codeRooms != 403 && codeRooms != -1) {
+            throw IOException("HTTP $codeRooms")
         }
     }
 }
