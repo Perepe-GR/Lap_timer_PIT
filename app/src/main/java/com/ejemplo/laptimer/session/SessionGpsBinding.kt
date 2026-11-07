@@ -72,19 +72,27 @@ fun MainActivity.onPosition(ev: NmeaEvent.Position, render: Boolean) {
         renderGps()
         if (st != null) renderEngine(st)
         updateLock()
-        if (!demoActive && !autoLoadDone) {
-            autoLoadDone = true
+        if (!demoActive && (!autoLoadDone || circuit == null)) {
             autoLoad(ev.lat, ev.lon)
         }
     }
 }
 
+private var lastAutoLoadCheckMs = 0L
+
 fun MainActivity.autoLoad(lat: Double, lon: Double) {
     if (reconName != null) return
     if (lastState?.running == true) return
-    val near = store.nearest(lat, lon, 3000.0) ?: return
+    if (Math.abs(lat) < 0.0001 && Math.abs(lon) < 0.0001) return
+
+    val now = SystemClock.elapsedRealtime()
+    if (now - lastAutoLoadCheckMs < 10_000L && circuit != null) return
+    lastAutoLoadCheckMs = now
+
+    val near = store.nearest(lat, lon, 5000.0) ?: return
     if (near.name != circuit?.name) {
         selectCircuit(near)
-        toast("Loaded circuit: ${near.name}")
+        toast("Auto-loaded circuit: ${near.name}")
+        autoLoadDone = true
     }
 }
