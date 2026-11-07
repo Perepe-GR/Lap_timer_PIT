@@ -45,15 +45,10 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
     val uiState: StateFlow<LobbyUiState> = _uiState.asStateFlow()
 
     init {
-        // Strict real-time validation: always enter waiting room and listen to Firebase request status (/rooms/{teamName}/requests/{deviceId}/status)
+        // Strict real-time validation: always enter waiting room and listen to Firebase request status
         val globalRoom = settings.ensureRoom()
         val pilotName = settings.driverName
-        val currentUid = try {
-            runBlocking { FirebaseAuthManager.ensureAuthenticated() }
-        } catch (_: Exception) {
-            "pilot-" + System.currentTimeMillis()
-        }
-        settings.deviceUid = currentUid
+        val currentUid = settings.deviceUid
 
         _uiState.value = _uiState.value.copy(
             teamCode = globalRoom,
@@ -62,7 +57,7 @@ class EnduranceLobbyViewModel(application: Application) : AndroidViewModel(appli
             step = LobbyUiState.STEP_WAITING
         )
 
-        enduranceRepository.setupDriverPresence(globalRoom, currentUid, "driving")
+        enduranceRepository.setupDevicePresence(globalRoom, currentUid, settings.carName, "driving")
 
         viewModelScope.launch {
             runCatching {

@@ -42,7 +42,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
     fun startSession(teamCode: String, myPilotId: String) {
         syncJob?.cancel()
         _uiState.value = _uiState.value.copy(pilotId = myPilotId, pilotName = settings.driverName)
-        enduranceRepository.setupDriverPresence(teamCode, myPilotId, "driving")
+        enduranceRepository.setupDevicePresence(teamCode, myPilotId, settings.carName, "driving")
         syncJob = viewModelScope.launch {
             launch {
                 syncClient.observeCurrentPilotId(teamCode).collect { curId ->
@@ -79,7 +79,7 @@ class PilotSessionViewModel(application: Application) : AndroidViewModel(applica
     fun leaveSession(teamCode: String, myPilotId: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             runCatching {
-                enduranceRepository.updateDriverStatusAtomic(teamCode, myPilotId, "offline")
+                enduranceRepository.updateDeviceStatusAtomic(teamCode, myPilotId, "offline")
                 syncClient.removePilotPresence(teamCode, myPilotId)
             }
             settings.clearEnduranceSession()

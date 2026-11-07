@@ -101,31 +101,37 @@ class EnduranceRepository(
         scheduleConnectedSync(code, pilotId)
     }
 
-    fun setupDriverPresence(roomCode: String, deviceUid: String, initialStatus: String = "driving") {
+    fun setupDevicePresence(roomCode: String, deviceUid: String, deviceName: String, initialStatus: String = "driving") {
         try {
             val dbUrl = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
             val database = com.google.firebase.database.FirebaseDatabase.getInstance(dbUrl)
-            val driverStatusRef = database.getReference("rooms/$roomCode/drivers/$deviceUid/status")
-            driverStatusRef.setValue(initialStatus)
-            driverStatusRef.onDisconnect().setValue("offline")
+            
+            val deviceRef = database.getReference("rooms/$roomCode/devices/$deviceUid")
+            val initialData = mapOf(
+                "deviceName" to deviceName,
+                "status" to initialStatus,
+                "lastSeenTs" to System.currentTimeMillis()
+            )
+            deviceRef.setValue(initialData)
 
-            val pilotStatusRef = database.getReference("rooms/$roomCode/pilots/$deviceUid/info/status")
-            pilotStatusRef.setValue(initialStatus.uppercase())
-            pilotStatusRef.onDisconnect().setValue("OFFLINE")
+            val statusRef = database.getReference("rooms/$roomCode/devices/$deviceUid/status")
+            statusRef.onDisconnect().setValue("offline")
+
+            val tsRef = database.getReference("rooms/$roomCode/devices/$deviceUid/lastSeenTs")
+            tsRef.onDisconnect().setValue(System.currentTimeMillis())
         } catch (e: Exception) {
             // Ignore
         }
     }
 
-    suspend fun updateDriverStatusAtomic(roomCode: String, deviceUid: String, status: String) {
+    suspend fun updateDeviceStatusAtomic(roomCode: String, deviceUid: String, status: String) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val dbUrl = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
                 val database = com.google.firebase.database.FirebaseDatabase.getInstance(dbUrl)
                 val updates = mapOf(
-                    "rooms/$roomCode/drivers/$deviceUid/status" to status,
-                    "rooms/$roomCode/pilots/$deviceUid/info/status" to status.uppercase(),
-                    "rooms/$roomCode/pilots/$deviceUid/info/lastSeenTs" to System.currentTimeMillis()
+                    "rooms/$roomCode/devices/$deviceUid/status" to status,
+                    "rooms/$roomCode/devices/$deviceUid/lastSeenTs" to System.currentTimeMillis()
                 )
                 database.reference.updateChildren(updates)
             } catch (e: Exception) {

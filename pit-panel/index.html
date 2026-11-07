@@ -329,6 +329,14 @@
             }, err => {
                 console.warn('Error reading drivers:', err);
             });
+            db.ref(`rooms/${teamName}/devices`).on('value', snapshot => {
+                window.teamDevicesData = snapshot.val();
+                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
+                    renderAcceptedPilots(teamName, snap.val());
+                });
+            }, err => {
+                console.warn('Error reading devices:', err);
+            });
             db.ref(`rooms/${teamName}/session/currentPilotId`).on('value', snapshot => {
                 window.currentActiveDriverId = snapshot.val();
                 // Re-render accepted list to highlight current driver
@@ -519,10 +527,14 @@
                         count++;
                         const isDriving = (window.currentActiveDriverId === driverId);
 
+                        let deviceData = (window.teamDevicesData && window.teamDevicesData[driverId]) || {};
+                        let deviceStatus = deviceData.status || '';
+                        let deviceLastSeen = deviceData.lastSeenTs || 0;
+
                         let pilotData = (window.teamPilotsData && window.teamPilotsData[driverId]) || {};
                         let pilotInfo = pilotData.info || {};
-                        let driverStatus = pilotInfo.status || 'READY';
-                        let lastSeen = pilotInfo.lastSeenTs || req.requestedAt || 0;
+                        let driverStatus = deviceStatus || pilotInfo.status || 'READY';
+                        let lastSeen = deviceLastSeen || pilotInfo.lastSeenTs || req.requestedAt || 0;
                         let isOffline = (driverStatus.toLowerCase() === 'offline' || driverStatus.toLowerCase() === 'disconnected' || (Date.now() - lastSeen > 35000));
 
                         let dotColor = isOffline ? 'bg-red-500' : (isDriving ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-500');
