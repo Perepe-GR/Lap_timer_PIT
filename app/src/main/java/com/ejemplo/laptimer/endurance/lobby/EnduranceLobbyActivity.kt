@@ -1,7 +1,6 @@
 package com.ejemplo.laptimer.endurance.lobby
 
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
@@ -15,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ejemplo.laptimer.NetSettings
+import com.ejemplo.laptimer.ThemeManager
 import com.ejemplo.laptimer.endurance.pilot.PilotSessionActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -39,9 +39,10 @@ class EnduranceLobbyActivity : AppCompatActivity() {
             return
         }
 
+        val theme = ThemeManager.getTheme(this)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#0B0D10"))
+            setBackgroundColor(theme.bg)
             setPadding(dp(16), dp(10), dp(16), dp(10))
         }
 
@@ -53,7 +54,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
             text = "‹  BACK"
             textSize = 15f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#C6F432"))
+            setTextColor(theme.accent)
             setPadding(0, dp(6), dp(16), dp(6))
             setOnClickListener { finish() }
         }
@@ -62,7 +63,7 @@ class EnduranceLobbyActivity : AppCompatActivity() {
             text = "Endurance Cockpit Join"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+            setTextColor(theme.text)
         }
         header.addView(title)
         root.addView(header)

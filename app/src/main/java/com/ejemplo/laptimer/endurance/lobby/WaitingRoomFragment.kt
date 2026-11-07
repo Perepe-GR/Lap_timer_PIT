@@ -1,7 +1,6 @@
 package com.ejemplo.laptimer.endurance.lobby
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
@@ -14,6 +13,7 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.ejemplo.laptimer.ThemeManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -32,22 +32,23 @@ class WaitingRoomFragment : Fragment() {
     private var timerJob: Job? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val theme = ThemeManager.getTheme(requireContext())
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#0B0D10"))
+            setBackgroundColor(theme.bg)
             setPadding(dp(20), dp(16), dp(20), dp(16))
         }
 
         txtInfo = TextView(requireContext()).apply {
             textSize = 18f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+            setTextColor(theme.text)
         }
         root.addView(txtInfo)
 
         txtTimeout = TextView(requireContext()).apply {
             textSize = 14f
-            setTextColor(Color.parseColor("#9AA3AE"))
+            setTextColor(theme.muted)
             gravity = Gravity.CENTER
             setPadding(0, dp(12), 0, dp(4))
         }
@@ -58,8 +59,8 @@ class WaitingRoomFragment : Fragment() {
             gravity = Gravity.CENTER
             textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#0B0D10"))
-            background = roundBg(Color.parseColor("#C6F432"), 10, requireContext())
+            setTextColor(theme.bg)
+            background = roundBg(theme.accent, 10, requireContext())
             setPadding(0, dp(12), 0, dp(12))
             visibility = View.GONE
             setOnClickListener { resetTimeout() }
@@ -69,7 +70,7 @@ class WaitingRoomFragment : Fragment() {
         val lbl = TextView(requireContext()).apply {
             text = "Connected Team Drivers:"
             textSize = 14f
-            setTextColor(Color.parseColor("#9AA3AE"))
+            setTextColor(theme.muted)
         }
         root.addView(lbl, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
 
