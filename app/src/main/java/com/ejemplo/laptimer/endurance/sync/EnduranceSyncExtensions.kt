@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.json.JSONObject
 
-/** Extension functions for EnduranceSyncClient providing real-time observers and lobby actions. */
+/** Extension functions for EnduranceSyncClient providing robust real-time observers and lobby actions. */
 
 fun EnduranceSyncClient.observePendingPilots(code: String): Flow<Map<String, PendingPilot>> = flow {
     while (true) {
@@ -16,27 +16,33 @@ fun EnduranceSyncClient.observePendingPilots(code: String): Flow<Map<String, Pen
             if (text.isNotBlank() && text != "null") {
                 val trimmed = text.trim()
                 if (trimmed.startsWith("{")) {
-                    val result = mutableMapOf<String, PendingPilot>()
-                    val root = JSONObject(trimmed)
-                    val keys = root.keys()
-                    while (keys.hasNext()) {
-                        val pId = keys.next()
-                        if (!root.isNull(pId)) {
-                            val pObj = root.getJSONObject(pId)
-                            val map = mutableMapOf<String, Any?>()
-                            val ik = pObj.keys()
-                            while (ik.hasNext()) {
-                                val k = ik.next()
-                                if (!pObj.isNull(k)) map[k] = pObj.get(k)
+                    try {
+                        val result = mutableMapOf<String, PendingPilot>()
+                        val root = JSONObject(trimmed)
+                        val keys = root.keys()
+                        while (keys.hasNext()) {
+                            val pId = keys.next()
+                            if (!root.isNull(pId)) {
+                                val pObj = root.optJSONObject(pId) ?: continue
+                                val map = mutableMapOf<String, Any?>()
+                                val ik = pObj.keys()
+                                while (ik.hasNext()) {
+                                    val k = ik.next()
+                                    if (!pObj.isNull(k)) map[k] = pObj.get(k)
+                                }
+                                result[pId] = pendingPilotFromMap(map)
                             }
-                            result[pId] = pendingPilotFromMap(map)
                         }
+                        emit(result)
+                    } catch (_: Exception) {
+                        emit(emptyMap())
                     }
-                    emit(result)
                 }
             } else {
                 emit(emptyMap())
             }
+        }.onFailure {
+            emit(emptyMap())
         }
         delay(3000L)
     }
@@ -49,26 +55,32 @@ fun EnduranceSyncClient.observePilots(code: String): Flow<Map<String, PilotData>
             if (res.isNotBlank() && res != "null") {
                 val trimmed = res.trim()
                 if (trimmed.startsWith("{")) {
-                    val result = mutableMapOf<String, PilotData>()
-                    val root = JSONObject(trimmed)
-                    val keys = root.keys()
-                    while (keys.hasNext()) {
-                        val pId = keys.next()
-                        if (!root.isNull(pId)) {
-                            val pObj = root.getJSONObject(pId)
-                            val infoMap = mutableMapOf<String, Any?>()
-                            if (pObj.has("info") && !pObj.isNull("info")) {
-                                val infoObj = pObj.getJSONObject("info")
-                                val ik = infoObj.keys()
-                                while (ik.hasNext()) {
-                                    val k = ik.next()
-                                    if (!infoObj.isNull(k)) infoMap[k] = infoObj.get(k)
+                    try {
+                        val result = mutableMapOf<String, PilotData>()
+                        val root = JSONObject(trimmed)
+                        val keys = root.keys()
+                        while (keys.hasNext()) {
+                            val pId = keys.next()
+                            if (!root.isNull(pId)) {
+                                val pObj = root.optJSONObject(pId) ?: continue
+                                val infoMap = mutableMapOf<String, Any?>()
+                                if (pObj.has("info") && !pObj.isNull("info")) {
+                                    val infoObj = pObj.optJSONObject("info")
+                                    if (infoObj != null) {
+                                        val ik = infoObj.keys()
+                                        while (ik.hasNext()) {
+                                            val k = ik.next()
+                                            if (!infoObj.isNull(k)) infoMap[k] = infoObj.get(k)
+                                        }
+                                    }
                                 }
+                                result[pId] = PilotData(info = pilotInfoFromMap(infoMap))
                             }
-                            result[pId] = PilotData(info = pilotInfoFromMap(infoMap))
                         }
+                        emit(result)
+                    } catch (_: Exception) {
+                        // Ignore malformed payloads
                     }
-                    emit(result)
                 }
             }
         }
@@ -83,14 +95,18 @@ fun EnduranceSyncClient.observeSessionState(code: String): Flow<SessionState> = 
             if (res.isNotBlank() && res != "null") {
                 val trimmed = res.trim()
                 if (trimmed.startsWith("{")) {
-                    val obj = JSONObject(trimmed)
-                    val map = mutableMapOf<String, Any?>()
-                    val keys = obj.keys()
-                    while (keys.hasNext()) {
-                        val k = keys.next()
-                        if (!obj.isNull(k)) map[k] = obj.get(k)
+                    try {
+                        val obj = JSONObject(trimmed)
+                        val map = mutableMapOf<String, Any?>()
+                        val keys = obj.keys()
+                        while (keys.hasNext()) {
+                            val k = keys.next()
+                            if (!obj.isNull(k)) map[k] = obj.get(k)
+                        }
+                        emit(sessionStateFromMap(map))
+                    } catch (_: Exception) {
+                        // Ignore malformed payloads
                     }
-                    emit(sessionStateFromMap(map))
                 }
             }
         }
@@ -108,6 +124,8 @@ fun EnduranceSyncClient.observeCurrentPilotId(code: String): Flow<String> = flow
             } else {
                 emit("")
             }
+        }.onFailure {
+            emit("")
         }
         delay(3000L)
     }
