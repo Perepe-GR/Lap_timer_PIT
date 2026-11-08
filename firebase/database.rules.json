@@ -60,7 +60,9 @@
     },
     "circuits": {
       ".read": "true",
-      ".write": "auth != null"
+      "$circuitKey": {
+        ".write": "auth != null && (newData.exists() || root.child('admins').child(auth.uid).exists() || auth.token.admin == true)"
+      }
     }
   }
 }

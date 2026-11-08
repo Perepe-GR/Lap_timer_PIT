@@ -101,6 +101,36 @@ class CircuitStore(private val context: Context) {
         fileFor(name).delete()
     }
 
+    /** Deletes circuit locally, and from global Firebase DB only if executed by an admin/developer app. */
+    fun deleteFromFirebase(name: String, isAdmin: Boolean): Boolean {
+        delete(name)
+        if (!isAdmin) return false
+
+        val settings = NetSettings(context)
+        val dbUrl = settings.dbUrl.ifBlank { "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app" }
+        val circuitKey = name.lowercase().replace(Regex("[^a-z0-9]"), "_")
+
+        Thread {
+            try {
+                val token = kotlinx.coroutines.runBlocking {
+                    try { com.ejemplo.laptimer.firebase.FirebaseAuthManager.getIdToken() } catch (_: Exception) { null }
+                }
+                val cleanDb = dbUrl.trimEnd('/')
+                val authQuery = if (!token.isNullOrBlank()) "?auth=$token" else ""
+                val url = java.net.URL("$cleanDb/circuits/$circuitKey.json$authQuery")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "DELETE"
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                conn.responseCode
+                conn.disconnect()
+            } catch (_: Exception) {
+                // Ignore network failures gracefully
+            }
+        }.start()
+        return true
+    }
+
     fun list(): List<Circuit> {
         val files = dir.listFiles() ?: return emptyList()
         return files
