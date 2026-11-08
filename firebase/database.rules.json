@@ -55,6 +55,11 @@
           "$pilotId": {
             ".write": "auth != null && (auth.uid == $pilotId || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
           }
+        },
+        "devices": {
+          "$deviceUid": {
+            ".write": "auth != null"
+          }
         }
       }
     },
