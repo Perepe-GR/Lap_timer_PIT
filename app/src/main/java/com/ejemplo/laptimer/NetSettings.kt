@@ -52,6 +52,7 @@ class NetSettings(context: Context) {
 
     fun saveEnduranceSession(roomCode: String, role: String, uid: String) {
         activeRoomCode = roomCode
+        room = roomCode
         userRole = role
         deviceUid = uid
         sessionActive = true

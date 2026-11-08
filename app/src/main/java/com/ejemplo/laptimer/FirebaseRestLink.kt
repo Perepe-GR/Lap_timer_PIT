@@ -30,7 +30,7 @@ class FirebaseRestLink(
     private var first = true
     private var purged = false
 
-    private val client: FirebaseRestClient get() = FirebaseRestClient(settings.dbUrl, settings.room)
+    private val client: FirebaseRestClient get() = FirebaseRestClient(settings.dbUrl, settings.activeRoomCode.ifBlank { settings.room.ifBlank { settings.ensureRoom() } })
 
     private fun request(method: String, path: String, body: String?, query: String): String {
         val token = runBlocking {
