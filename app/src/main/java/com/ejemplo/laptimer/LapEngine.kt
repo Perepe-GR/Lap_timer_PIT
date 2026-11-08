@@ -99,6 +99,16 @@ class LapEngine(private val circuit: Circuit, initial: Persisted? = null) {
             currentLapHasGapWarning = true
         }
 
+        if (!gpsFilter.isFixPlausible(lat, lon, speedKmh, t)) {
+            val shown = if (marks.any { it != null }) marks else prevMarks
+            return EngineState(
+                running = lapStart != null, lapNumber = lapsCompleted + 1, sector = minOf(expected + 1, n),
+                sectorCount = n, currentLapMs = lapStart?.let { Math.round(t - it) }, lastLapMs = lastLapMs, bestLapMs = bestLapMs,
+                optimalMs = sectorCalculator.optimal(), deltaSec = null, speedKmh = speedKmh, gpsTimeMs = t,
+                marks = shown.toList(), isInvalid = lapInvalid, gapState = gapState
+            )
+        }
+
         val x = detector.frame.x(lon)
         val y = detector.frame.y(lat)
 

@@ -40,15 +40,24 @@ class LapDetector(private val circuit: Circuit) {
         return t
     }
 
-    fun checkPitCrossing(inPit: Boolean, x1: Double, y1: Double, x2: Double, y2: Double): Pair<Boolean, Double>? {
+    private var lastPitCrossingMs = 0L
+
+    fun checkPitCrossing(inPit: Boolean, x1: Double, y1: Double, x2: Double, y2: Double, nowMs: Long = System.currentTimeMillis()): Pair<Boolean, Double>? {
+        if (nowMs - lastPitCrossingMs < 3000L) return null
         val pin = pitInGate ?: return null
         val pout = pitOutGate ?: return null
         if (!inPit) {
             val fIn = crossing(pin, x1, y1, x2, y2)
-            if (fIn != null) return Pair(true, fIn)
+            if (fIn != null) {
+                lastPitCrossingMs = nowMs
+                return Pair(true, fIn)
+            }
         } else {
             val fOut = crossing(pout, x1, y1, x2, y2)
-            if (fOut != null) return Pair(false, fOut)
+            if (fOut != null) {
+                lastPitCrossingMs = nowMs
+                return Pair(false, fOut)
+            }
         }
         return null
     }

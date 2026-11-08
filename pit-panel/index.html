@@ -590,33 +590,62 @@
             }
         }
 
+        function dispatchInstruction(teamName, payload) {
+            if (!teamName || !payload) return;
+            const ref = db.ref(`rooms/${teamName}/instructions`);
+            ref.once('value').then(snap => {
+                const val = snap.val();
+                let activeCount = 0;
+                const now = Date.now();
+                if (val && typeof val === 'object') {
+                    Object.keys(val).forEach(k => {
+                        const item = val[k];
+                        if (item && typeof item === 'object' && item.t && (now - item.t < 90000)) {
+                            activeCount++;
+                        }
+                    });
+                }
+                if (activeCount >= 2) {
+                    alert('Maximum 2 concurrent active live instructions reached. Please wait for one to expire or clear before sending another.');
+                    return;
+                }
+                const msgId = 'm' + now;
+                ref.child(msgId).set(payload);
+                ref.update({
+                    text: payload.text,
+                    message: payload.message,
+                    bg: payload.bg,
+                    flag: payload.flag || '',
+                    t: payload.t,
+                    timestamp: payload.timestamp
+                });
+            }).catch(err => {
+                console.error('Error transmitting instruction:', err);
+            });
+        }
+
         window.sendQuickCommand = function(commandText, bgKey = 'amarillo') {
             if (!activeTeamName || !commandText) return;
-            db.ref(`rooms/${activeTeamName}/instructions`).set({
+            dispatchInstruction(activeTeamName, {
                 text: commandText,
                 message: commandText,
                 bg: bgKey,
                 timestamp: Date.now(),
                 t: Date.now()
-            }).then(() => {
-                const input = document.getElementById('instruction-input');
-                if (input) input.value = '';
-            }).catch(err => {
-                console.error('Error transmitting quick command:', err);
             });
+            const input = document.getElementById('instruction-input');
+            if (input) input.value = '';
         };
 
         window.sendFlag = function(flagType, text, bgKey) {
             if (!activeTeamName) return;
-            db.ref(`rooms/${activeTeamName}/instructions`).set({
+            dispatchInstruction(activeTeamName, {
                 text: text,
                 message: text,
                 flag: flagType,
                 bg: bgKey,
                 timestamp: Date.now(),
                 t: Date.now()
-            }).catch(err => {
-                console.error('Error transmitting flag:', err);
             });
         };
 
@@ -625,17 +654,14 @@
             const message = document.getElementById('instruction-input').value.trim();
             if (!message || !activeTeamName) return;
 
-            db.ref(`rooms/${activeTeamName}/instructions`).set({
+            dispatchInstruction(activeTeamName, {
                 text: message,
                 message: message,
                 bg: 'amarillo',
                 timestamp: Date.now(),
                 t: Date.now()
-            }).then(() => {
-                document.getElementById('instruction-input').value = '';
-            }).catch(err => {
-                console.error('Error transmitting instruction:', err);
             });
+            document.getElementById('instruction-input').value = '';
         });
 
         function loadCircuitsRepository() {

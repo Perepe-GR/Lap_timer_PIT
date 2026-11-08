@@ -44,7 +44,7 @@ class SessionRecorder(private val store: SessionStore, private val saveTrace: ()
         lastLon = lon
         if (kmh > r.maxSpeedKmh) r.maxSpeedKmh = kmh
         r.durationMs = off
-        writer?.add(off, lat, lon, kmh.toFloat())
+        runCatching { writer?.add(off, lat, lon, kmh.toFloat()) }
         if (kmh < 2.0) {
             if (stoppedSince < 0) stoppedSince = gpsT
             else if (gpsT - stoppedSince > 300_000L) end()
@@ -58,16 +58,16 @@ class SessionRecorder(private val store: SessionStore, private val saveTrace: ()
     fun onLap(res: LapResult) {
         val r = rec ?: return
         r.laps.add(LapRecord(res.number, res.lapMs, res.splits, res.startMs - t0, res.endMs - t0))
-        store.save(r)
+        runCatching { store.save(r) }
     }
 
     @Synchronized
     fun end() {
         val r = rec ?: return
-        writer?.close()
+        runCatching { writer?.close() }
         writer = null
         rec = null
-        if (r.laps.isEmpty()) store.delete(r.id) else store.save(r)
+        if (r.laps.isEmpty()) runCatching { store.delete(r.id) } else runCatching { store.save(r) }
     }
 }
 
