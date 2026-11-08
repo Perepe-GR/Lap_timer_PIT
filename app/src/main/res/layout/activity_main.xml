@@ -502,6 +502,87 @@
                     android:layout_marginBottom="6dp"
                     android:orientation="horizontal" />
             </FrameLayout>
+
+            <!-- Vista 4: Diagnóstico GPS y Velocidad Detallada -->
+            <LinearLayout
+                android:id="@+id/viewGpsSpeed"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#0B0D10"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GPS &amp; SPEED TELEMETRY"
+                    android:textColor="#9AA3AE"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/txtGpsSpeedBig"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="sans-serif-condensed"
+                    android:text="0"
+                    android:textColor="#C6F432"
+                    android:textSize="96sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="KM/H"
+                    android:textColor="#F2F4F7"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="24dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#15181C"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:elevation="4dp">
+
+                    <TextView
+                        android:id="@+id/txtGpsDetailFreq"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Refresh Rate: -- Hz"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/txtGpsDetailSats"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Satellites: -- · HDOP: --"
+                        android:textColor="#F2F4F7"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/txtGpsDetailAlt"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Altitude: -- m · Fix: Active"
+                        android:textColor="#9AA3AE"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
         </FrameLayout>
 
         <!-- Banda inferior: solo visible con un mensaje del pit o durante el reconocimiento -->

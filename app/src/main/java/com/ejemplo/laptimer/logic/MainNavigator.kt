@@ -52,8 +52,9 @@ fun MainActivity.hideTopBarNow() {
 }
 
 fun MainActivity.toggleView(next: Boolean) {
-    viewIndex = (viewIndex + (if (next) 1 else 2)) % 3
+    viewIndex = (viewIndex + (if (next) 1 else 3)) % 4
     bindings.viewMain.visibility = if (viewIndex == 0) View.VISIBLE else View.GONE
     bindings.viewSimple.visibility = if (viewIndex == 1) View.VISIBLE else View.GONE
     bindings.viewMap.visibility = if (viewIndex == 2) View.VISIBLE else View.GONE
+    bindings.viewGpsSpeed.visibility = if (viewIndex == 3) View.VISIBLE else View.GONE
 }

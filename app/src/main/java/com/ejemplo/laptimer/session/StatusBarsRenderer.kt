@@ -19,6 +19,11 @@ fun MainActivity.renderGps() {
     }
     bindings.txtGps.typeface = Typeface.MONOSPACE
     bindings.txtGps.text = "$gpsStr  ·  $batText"
+
+    bindings.txtGpsSpeedBig.text = String.format(Locale.US, "%.0f", lastKmh)
+    bindings.txtGpsDetailFreq.text = String.format(Locale.US, "Refresh Rate: %.1f Hz", hz)
+    bindings.txtGpsDetailSats.text = String.format(Locale.US, "Satellites: %d · HDOP: %.1f", sats, hdop)
+    bindings.txtGpsDetailAlt.text = String.format(Locale.US, "Altitude: %.1f m · Fix: %s", altitude, if (hasFix) "Active (Locked)" else "Searching...")
 }
 
 fun MainActivity.renderNet() {
