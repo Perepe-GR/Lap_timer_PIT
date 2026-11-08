@@ -46,7 +46,8 @@ class FirebaseRestLink(
 
     fun start() {
         stop()
-        if (!settings.enabled || settings.dbUrl.isBlank() || settings.room.isBlank()) {
+        val roomCode = settings.activeRoomCode.ifBlank { settings.room.ifBlank { settings.ensureRoom() } }
+        if (settings.dbUrl.isBlank() || roomCode.isBlank()) {
             onStatus(NetStatus.OFF)
             return
         }
@@ -84,18 +85,20 @@ class FirebaseRestLink(
     private fun cycle() {
         try {
             val car = settings.carKey()
-            val t = telemetry()
-            if (t != null) request("PUT", "live/$car", t, "")
-            while (true) {
-                val lap = pendingLaps.peek() ?: break
-                val key = "L" + JSONObject(lap).optLong("t", System.currentTimeMillis())
-                request("PUT", "laps/$car/$key", lap, "")
-                pendingLaps.poll()
+            if (settings.enabled) {
+                val t = telemetry()
+                if (t != null) request("PUT", "live/$car", t, "")
+                while (true) {
+                    val lap = pendingLaps.peek() ?: break
+                    val key = "L" + JSONObject(lap).optLong("t", System.currentTimeMillis())
+                    request("PUT", "laps/$car/$key", lap, "")
+                    pendingLaps.poll()
+                }
             }
             fetchMessages(car)
             fetchInstructions()
             fetchCommand(car)
-            if (!first && !purged) purgeInbox(car)
+            if (settings.enabled && !first && !purged) purgeInbox(car)
             onStatus(NetStatus.OK)
         } catch (_: Exception) {
             onStatus(NetStatus.ERROR)
