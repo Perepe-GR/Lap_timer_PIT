@@ -87,6 +87,11 @@ fun MainActivity.buildTelemetry(): String? {
         st.bestLapMs?.let { o.put("best", it) }
         st.optimalMs?.let { o.put("opt", it) }
         st.deltaSec?.let { o.put("delta", it) }
+        val splitsArr = JSONArray()
+        for (m in st.marks) {
+            if (m != null) splitsArr.put(m.ms)
+        }
+        o.put("splits", splitsArr)
     }
     return o.toString()
 }

@@ -171,7 +171,7 @@
                                 <th class="p-3 text-center">Battery</th>
                                 <th class="p-3 font-mono text-right">Last Lap</th>
                                 <th class="p-3 font-mono text-right">Best Lap</th>
-                                <th class="p-3 font-mono text-center">S1 / S2 / S3</th>
+                                <th class="p-3 font-mono text-center">Sectors</th>
                                 <th class="p-3 text-center">Status</th>
                             </tr>
                         </thead>
@@ -511,15 +511,21 @@
                     const lastLap = formatMs(t.lastMs || t.timeMs || t.last);
                     const bestLap = formatMs(t.bestMs || t.best);
 
-                    let s1 = '--.--', s2 = '--.--', s3 = '--.--';
+                    let sectorHtml = '';
+                    let splits = [];
                     if (t.sectors && typeof t.sectors === 'object') {
-                        if (t.sectors.S1 || t.sectors['1']) s1 = formatMs(t.sectors.S1 || t.sectors['1']);
-                        if (t.sectors.S2 || t.sectors['2']) s2 = formatMs(t.sectors.S2 || t.sectors['2']);
-                        if (t.sectors.S3 || t.sectors['3']) s3 = formatMs(t.sectors.S3 || t.sectors['3']);
+                        Object.keys(t.sectors).sort().forEach(k => {
+                            splits.push(formatMs(t.sectors[k]));
+                        });
                     } else if (Array.isArray(t.splits)) {
-                        if (t.splits[0]) s1 = formatMs(t.splits[0]);
-                        if (t.splits[1]) s2 = formatMs(t.splits[1]);
-                        if (t.splits[2]) s3 = formatMs(t.splits[2]);
+                        t.splits.forEach(sp => {
+                            splits.push(formatMs(sp));
+                        });
+                    }
+                    if (splits.length === 0) {
+                        sectorHtml = '<span class="text-slate-500 italic">--.--</span>';
+                    } else {
+                        sectorHtml = splits.map((s, idx) => `<span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 inline-block my-0.5" title="S${idx+1}">S${idx+1}: ${s}</span>`).join(' ');
                     }
 
                     let pilotInfo = (window.teamPilotsData && (window.teamPilotsData[carId] || window.teamPilotsData[driverName])) || {};
@@ -539,10 +545,8 @@
                         <td class="p-3 text-center font-mono text-slate-300">${battery}</td>
                         <td class="p-3 text-right font-mono text-emerald-400 font-semibold">${lastLap}</td>
                         <td class="p-3 text-right font-mono text-purple-400 font-bold">${bestLap}</td>
-                        <td class="p-3 text-center font-mono text-xs text-slate-300 space-x-1">
-                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s1}</span>
-                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s2}</span>
-                            <span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">${s3}</span>
+                        <td class="p-3 text-center font-mono text-xs text-slate-300">
+                            ${sectorHtml}
                         </td>
                         <td class="p-3 text-center">
                             <span class="inline-block w-3 h-3 rounded-full ${dotColor}" title="${titleText}"></span>
