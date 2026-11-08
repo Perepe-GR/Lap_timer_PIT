@@ -55,12 +55,13 @@ fun MainActivity.solid(fill: Int, fg: Int, text: String) {
 }
 
 fun MainActivity.applyMsgStyle(bg: String, text: String) {
-    when (bg) {
-        "verde" -> solid(Color.parseColor("#22C55E"), Color.parseColor("#0B0D10"), text)
-        "rojo" -> solid(Color.parseColor("#EF4444"), Color.WHITE, text)
-        "azul" -> solid(Color.parseColor("#2563EB"), Color.WHITE, text)
-        "blanco" -> solid(Color.parseColor("#F2F4F7"), Color.parseColor("#141413"), text)
-        "rayas" -> {
+    val b = bg.lowercase()
+    when {
+        b == "verde" || b == "green" -> solid(Color.parseColor("#22C55E"), Color.parseColor("#0B0D10"), text)
+        b == "rojo" || b == "red" -> solid(Color.parseColor("#EF4444"), Color.WHITE, text)
+        b == "azul" || b == "blue" -> solid(Color.parseColor("#2563EB"), Color.WHITE, text)
+        b == "blanco" || b == "white" -> solid(Color.parseColor("#F2F4F7"), Color.parseColor("#141413"), text)
+        b == "cuadros" || b == "rayas" || b == "finish" || b == "checkered" -> {
             bindings.bannerPit.background = StripesDrawable(Color.parseColor("#FACC15"), Color.parseColor("#EF4444"), dp(14).toFloat())
             bindings.bannerPit.setTextColor(Color.WHITE)
             val sp = SpannableString(" $text ")

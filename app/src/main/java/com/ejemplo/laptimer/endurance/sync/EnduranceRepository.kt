@@ -103,6 +103,7 @@ class EnduranceRepository(
 
     fun setupDevicePresence(roomCode: String, deviceUid: String, deviceName: String, initialStatus: String = "driving") {
         try {
+            purgeInactiveDevices(roomCode)
             val dbUrl = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
             val database = com.google.firebase.database.FirebaseDatabase.getInstance(dbUrl)
             
@@ -122,6 +123,27 @@ class EnduranceRepository(
         } catch (e: Exception) {
             // Ignore
         }
+    }
+
+    fun purgeInactiveDevices(roomCode: String) {
+        try {
+            val dbUrl = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app"
+            val database = com.google.firebase.database.FirebaseDatabase.getInstance(dbUrl)
+            val devicesRef = database.getReference("rooms/$roomCode/devices")
+            devicesRef.get().addOnSuccessListener { snapshot ->
+                val now = System.currentTimeMillis()
+                val twentyFourHours = 86_400_000L
+                for (child in snapshot.children) {
+                    val devUid = child.key ?: continue
+                    val status = child.child("status").value?.toString() ?: ""
+                    val lastSeen = child.child("lastSeenTs").value as? Long ?: 0L
+                    if (status.equals("offline", ignoreCase = true) && (now - lastSeen > twentyFourHours)) {
+                        database.getReference("rooms/$roomCode/devices/$devUid").removeValue()
+                        database.getReference("rooms/$roomCode/pilots/$devUid").removeValue()
+                    }
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     suspend fun updateDeviceStatusAtomic(roomCode: String, deviceUid: String, status: String) {

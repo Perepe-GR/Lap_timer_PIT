@@ -331,6 +331,7 @@
             });
             db.ref(`rooms/${teamName}/devices`).on('value', snapshot => {
                 window.teamDevicesData = snapshot.val();
+                purgeStaleDevices(teamName, window.teamDevicesData);
                 db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
                     renderAcceptedPilots(teamName, snap.val());
                 });
@@ -348,6 +349,23 @@
                 renderLiveTiming(snapshot.val());
             }, err => {
                 console.warn('Error reading live telemetry:', err);
+            });
+        }
+
+        function purgeStaleDevices(teamName, devices) {
+            if (!devices || typeof devices !== 'object') return;
+            const now = Date.now();
+            const twentyFourHours = 86400000;
+            Object.keys(devices).forEach(devId => {
+                const dev = devices[devId];
+                if (dev && typeof dev === 'object') {
+                    const status = (dev.status || '').toLowerCase();
+                    const lastSeen = dev.lastSeenTs || 0;
+                    if (status === 'offline' && lastSeen > 0 && (now - lastSeen > twentyFourHours)) {
+                        db.ref(`rooms/${teamName}/devices/${devId}`).remove();
+                        db.ref(`rooms/${teamName}/pilots/${devId}`).remove();
+                    }
+                }
             });
         }
 
