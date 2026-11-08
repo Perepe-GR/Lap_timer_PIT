@@ -88,15 +88,15 @@ Para evitar condiciones de carrera y duplicidades entre múltiples dispositivos,
 
 - **Ruta:** `/rooms/{roomCode}/live/{carId}`
 - **Campos:**
-  - `version` (String): `"V2.3.0"`.
+  - `version` (String): `"V2.4.0"`.
   - `car` (String): Nombre del coche (ej. `"GR86"`).
   - `driver` (String): Nombre del piloto actual.
   - `zone` (String): `"track"`, `"pit"` o `"paddock"`.
-  - `lat` (Double), `lon` (Double), `kmh` (Int), `lap` (Int), `timeMs` (Long), `bestMs` (Long, nullable), `stint` (Int), `t` (Long).
+  - `lat` (Double), `lon` (Double), `kmh` (Int), `lap` (Int), `timeMs` (Long), `bestMs` (Long, nullable), `bat` (Int, porcentaje batería 0-100), `stint` (Int), `t` (Long).
 - **Ejemplo:**
 ```json
 {
-  "version": "V2.3.0",
+  "version": "V2.4.0",
   "car": "GR86",
   "driver": "Driver 1",
   "zone": "track",
@@ -106,6 +106,7 @@ Para evitar condiciones de carrera y duplicidades entre múltiples dispositivos,
   "lap": 4,
   "timeMs": 74210,
   "bestMs": 72000,
+  "bat": 88,
   "stint": 1,
   "t": 1772745600000
 }
@@ -115,12 +116,12 @@ Para evitar condiciones de carrera y duplicidades entre múltiples dispositivos,
 
 - **Ruta:** `/rooms/{roomCode}/laps/{carId}/{lapKey}` (`lapKey` = `"L" + timestamp`)
 - **Campos:**
-  - `version` (String): `"V2.3.0"`.
+  - `version` (String): `"V2.4.0"`.
   - `n` (Int), `ms` (Long), `k` (Int), `d` (String), `st` (Int), `sectorsComplete` (Boolean), `sectors` (Object), `t` (Long).
 - **Ejemplo:**
 ```json
 {
-  "version": "V2.3.0",
+  "version": "V2.4.0",
   "n": 3,
   "ms": 72450,
   "k": 0,
