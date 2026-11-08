@@ -16,8 +16,11 @@
                 <span id="connection-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
                 <span id="connection-status-text" class="text-xs text-slate-400 font-semibold">Connecting...</span>
             </div>
-            <div id="team-info-badge" class="text-sm text-slate-400 hidden">
-                Active Pit: <span id="lbl-team-name" class="font-bold text-white"></span>
+            <div id="team-info-badge" class="items-center gap-3 text-sm text-slate-400 hidden">
+                <span>Active Pit: <span id="lbl-team-name" class="font-bold text-white"></span></span>
+                <button onclick="logoutPit()" class="bg-red-900/60 hover:bg-red-700 text-red-200 border border-red-700 text-xs px-2.5 py-1 rounded font-bold transition-colors">
+                    🚪 Logout
+                </button>
             </div>
         </div>
     </header>
@@ -42,6 +45,10 @@
                     <input type="password" id="team-pin-input" required minlength="4" maxlength="6"
                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
                            placeholder="••••">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="remember-session-checkbox" checked class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-red-500 cursor-pointer">
+                    <label for="remember-session-checkbox" class="text-xs text-slate-300 cursor-pointer">Remember session on this device (Auto-logout in 24h)</label>
                 </div>
                 <button type="submit" class="w-full bg-red-600 hover:bg-red-700 font-bold py-3 rounded-lg transition-colors shadow-lg shadow-red-900/40">
                     Connect to Pit
@@ -272,19 +279,77 @@
             }
         }
 
+        function savePitSession(teamName, pin) {
+            try {
+                const sessionData = {
+                    teamName: teamName,
+                    pin: pin,
+                    loginTs: Date.now()
+                };
+                localStorage.setItem('laptimer_pit_session', JSON.stringify(sessionData));
+            } catch (e) {}
+        }
+
+        function clearPitSession() {
+            try {
+                localStorage.removeItem('laptimer_pit_session');
+            } catch (e) {}
+            activeTeamName = null;
+        }
+
+        function checkSavedPitSession() {
+            try {
+                const saved = localStorage.getItem('laptimer_pit_session');
+                if (!saved) return;
+                const session = JSON.parse(saved);
+                const now = Date.now();
+                const twentyFourHours = 86400000;
+                if (session && session.teamName && session.loginTs && (now - session.loginTs < twentyFourHours)) {
+                    activeTeamName = session.teamName;
+                    session.loginTs = now;
+                    localStorage.setItem('laptimer_pit_session', JSON.stringify(session));
+
+                    document.getElementById('login-section').classList.add('hidden');
+                    document.getElementById('dashboard-section').classList.remove('hidden');
+                    document.getElementById('team-info-badge').classList.remove('hidden');
+                    document.getElementById('team-info-badge').classList.add('flex');
+                    document.getElementById('lbl-team-name').innerText = session.teamName;
+                    const liveRoomLbl = document.getElementById('lbl-live-room');
+                    if (liveRoomLbl) liveRoomLbl.innerText = session.teamName;
+                    initPitListeners(session.teamName);
+                    loadCircuitsRepository();
+                } else {
+                    clearPitSession();
+                }
+            } catch (err) {
+                clearPitSession();
+            }
+        }
+
+        window.logoutPit = function() {
+            if (!confirm('Are you sure you want to log out of the Pit Wall Dashboard?')) return;
+            clearPitSession();
+            window.location.reload();
+        };
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             hideLoginError();
             const teamName = document.getElementById('team-name-input').value.trim().toUpperCase();
             const pin = document.getElementById('team-pin-input').value.trim();
+            const remember = document.getElementById('remember-session-checkbox')?.checked ?? true;
 
             try {
                 const isValid = await verifyTeamCredentials(teamName, pin);
                 if (isValid) {
                     activeTeamName = teamName;
+                    if (remember) {
+                        savePitSession(teamName, pin);
+                    }
                     document.getElementById('login-section').classList.add('hidden');
                     document.getElementById('dashboard-section').classList.remove('hidden');
                     document.getElementById('team-info-badge').classList.remove('hidden');
+                    document.getElementById('team-info-badge').classList.add('flex');
                     document.getElementById('lbl-team-name').innerText = teamName;
                     const liveRoomLbl = document.getElementById('lbl-live-room');
                     if (liveRoomLbl) liveRoomLbl.innerText = teamName;
@@ -297,6 +362,10 @@
                 console.error(err);
                 showLoginError('Network error connecting to Firebase. Check your connection.');
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSavedPitSession();
         });
 
         function initPitListeners(teamName) {
