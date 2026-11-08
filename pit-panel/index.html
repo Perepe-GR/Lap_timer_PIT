@@ -511,21 +511,12 @@
                     const lastLap = formatMs(t.lastMs || t.timeMs || t.last);
                     const bestLap = formatMs(t.bestMs || t.best);
 
+                    let nSectors = t.sectores || t.sectorCount || (Array.isArray(t.splits) ? Math.max(3, t.splits.length) : 3);
                     let sectorHtml = '';
-                    let splits = [];
-                    if (t.sectors && typeof t.sectors === 'object') {
-                        Object.keys(t.sectors).sort().forEach(k => {
-                            splits.push(formatMs(t.sectors[k]));
-                        });
-                    } else if (Array.isArray(t.splits)) {
-                        t.splits.forEach(sp => {
-                            splits.push(formatMs(sp));
-                        });
-                    }
-                    if (splits.length === 0) {
-                        sectorHtml = '<span class="text-slate-500 italic">--.--</span>';
-                    } else {
-                        sectorHtml = splits.map((s, idx) => `<span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 inline-block my-0.5" title="S${idx+1}">S${idx+1}: ${s}</span>`).join(' ');
+                    for (let i = 0; i < nSectors; i++) {
+                        let spVal = (t.splits && t.splits[i] && t.splits[i] > 0) ? formatMs(t.splits[i]) : '--.--';
+                        let isCompleted = (t.splits && t.splits[i] && t.splits[i] > 0);
+                        sectorHtml += `<span class="bg-slate-900 px-1.5 py-0.5 rounded border ${isCompleted ? 'border-emerald-700 text-emerald-300' : 'border-slate-700 text-slate-500'} inline-block my-0.5" title="S${i+1}">S${i+1}: ${spVal}</span> `;
                     }
 
                     let pilotInfo = (window.teamPilotsData && (window.teamPilotsData[carId] || window.teamPilotsData[driverName])) || {};
