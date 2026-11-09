@@ -58,7 +58,7 @@ class FirebaseRestLink(
         lastInstTime = 0L
         val e = Executors.newSingleThreadScheduledExecutor()
         exec = e
-        val period = settings.intervalS.toLong().coerceAtLeast(10L)
+        val period = settings.intervalS.toLong().coerceAtLeast(1L)
         e.scheduleWithFixedDelay({ cycle() }, 0L, period, TimeUnit.SECONDS)
     }
 

@@ -29,7 +29,7 @@ class PitSettingsActivity : PageActivity() {
             currentUiState.pin, "••••",
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         )
-        val etInt = numField(c1, "Telemetry Interval (seconds; min 10)", currentUiState.intervalS.toString())
+        val etInt = numField(c1, "Telemetry Interval (seconds; min 1)", currentUiState.intervalS.toString())
 
         val c3 = card("Data & Traces")
         val swTrace = check(c3, "Save full GPS trace in session files", settings.saveTrace)

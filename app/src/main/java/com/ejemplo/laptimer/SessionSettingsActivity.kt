@@ -49,7 +49,7 @@ class SessionSettingsActivity : PageActivity() {
 
         val cPit = card("Telemetry & Pit Crew")
         val swEnabled = check(cPit, "Enable telemetry with Pit Wall", currentUiState.enabled)
-        val etInt = numField(cPit, "Telemetry Interval (seconds; min 10)", currentUiState.intervalS.toString())
+        val etInt = numField(cPit, "Telemetry Interval (seconds; min 1)", currentUiState.intervalS.toString())
 
         addButton(cPit, button("SHARE TELEMETRY LINK") {
             val teamName = etTeamName.text.toString().trim()

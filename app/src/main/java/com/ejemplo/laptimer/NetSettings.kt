@@ -18,7 +18,7 @@ class NetSettings(context: Context) {
     var pin: String get() = p.getString("pin", "1234") ?: "1234"; set(v) = store.putS("pin", v.trim())
     var pinHash: String get() = p.getString("pinHash", "") ?: ""; set(v) = store.putS("pinHash", v)
     var salt: String get() = p.getString("salt", "") ?: ""; set(v) = store.putS("salt", v)
-    var intervalS: Int get() = p.getInt("interval", 10); set(v) = store.putI("interval", v.coerceAtLeast(10))
+    var intervalS: Int get() = p.getInt("interval", 1); set(v) = store.putI("interval", v.coerceAtLeast(1))
     var panelUrl: String get() = p.getString("panel", "https://user.github.io/pit-panel/") ?: "https://user.github.io/pit-panel/"; set(v) = store.putS("panel", v.trim())
     var saveTrace: Boolean get() = p.getBoolean("trace", true); set(v) = store.putB("trace", v)
 

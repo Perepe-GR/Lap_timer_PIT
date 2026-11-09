@@ -22,7 +22,7 @@ data class SettingsUiState(
     val teamName: String = "",
     val pin: String = "",
     val enabled: Boolean = false,
-    val intervalS: Int = 10,
+    val intervalS: Int = 1,
     val isLoading: Boolean = false,
     val teamNameError: String? = null,
     val pinError: String? = null,
@@ -57,7 +57,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onIntervalChanged(interval: Int) {
-        _uiState.value = _uiState.value.copy(intervalS = interval.coerceAtLeast(10))
+        _uiState.value = _uiState.value.copy(intervalS = interval.coerceAtLeast(1))
     }
 
     fun validateAndSave(
