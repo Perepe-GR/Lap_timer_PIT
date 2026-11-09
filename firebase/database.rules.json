@@ -40,7 +40,7 @@
           }
         },
         "instructions": {
-          ".write": "auth != null && root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid"
+          ".write": "auth != null"
         },
         "live": {
           "$carId": {
