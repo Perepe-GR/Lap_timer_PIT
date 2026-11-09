@@ -250,13 +250,18 @@
 
         async function verifyTeamCredentials(teamName, pin) {
             try {
+                console.log("verifyTeamCredentials start for team:", teamName);
                 if (!auth.currentUser) {
+                    console.log("Signing in anonymously...");
                     await auth.signInAnonymously();
                 }
+                console.log("Auth user UID:", auth.currentUser ? auth.currentUser.uid : "none");
+
                 let meta = null;
                 try {
                     const metaSnap = await db.ref('rooms/' + teamName + '/meta').once('value');
                     meta = metaSnap.val();
+                    console.log("Fetched room meta:", meta);
                 } catch (e) {
                     console.warn('Could not read room meta:', e);
                 }
@@ -264,18 +269,21 @@
                 if (meta) {
                     if (meta.pinHash && meta.salt) {
                         const computed = await sha256(meta.salt, pin);
+                        console.log("Comparing hashes. Computed:", computed, "Stored:", meta.pinHash);
                         if (computed.toLowerCase() === meta.pinHash.toLowerCase()) {
                             return true;
                         }
                     } else if (meta.pin && meta.pin === pin) {
                         return true;
                     }
+                    console.log("Room exists but PIN did not match.");
                     return false; // Room exists but incorrect PIN
                 }
 
                 try {
                     const teamSnap = await db.ref('teams/' + teamName).once('value');
                     const teamData = teamSnap.val();
+                    console.log("Fetched team data:", teamData);
                     if (teamData) {
                         if (teamData.pinHash && teamData.salt) {
                             const computed = await sha256(teamData.salt, pin);
@@ -285,13 +293,14 @@
                         } else if (teamData.pin && teamData.pin === pin) {
                             return true;
                         }
+                        console.log("Team exists but PIN did not match.");
                         return false; // Team exists but incorrect PIN
                     }
                 } catch (e) {
                     console.warn('Could not read team data:', e);
                 }
 
-                // If room and team do not exist yet, auto-create room and team from Pit Wall dashboard
+                console.log("Room and team not found. Auto-creating room/team...");
                 const salt = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
                 const pinHash = await sha256(salt, pin.trim());
                 const now = Date.now();
@@ -299,11 +308,11 @@
                     code: teamName,
                     name: teamName,
                     circuitId: 'Circuit 1',
-                    createdBy: 'web_crew_chief',
+                    createdBy: auth.currentUser ? auth.currentUser.uid : 'web_crew_chief',
                     createdAt: now,
                     pinHash: pinHash,
                     salt: salt,
-                    leaderUid: 'web_crew_chief',
+                    leaderUid: auth.currentUser ? auth.currentUser.uid : 'web_crew_chief',
                     mode: 'endurance',
                     updatedAt: now
                 };
@@ -322,6 +331,7 @@
                     finishedAt: 0
                 });
 
+                console.log("Auto-creation complete. Login successful.");
                 return true;
             } catch (err) {
                 console.error('Credential verification & creation error:', err);
