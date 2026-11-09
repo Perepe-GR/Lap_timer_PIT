@@ -13,7 +13,14 @@ var swapDismissed = false
 var pitSwapHandled = false
 
 fun MainActivity.ensureProgrammedSwap() {
+    if (!settings.isEndurance()) return
     val cur = stint
+    val target = settings.targetFor(cur.number)
+    val timeMet = target.maxMin > 0 && stintElapsedMs() >= target.maxMin * 60_000L
+    val lapsMet = target.planLaps > 0 && cur.lapsDone >= target.planLaps
+    val finalLap = isFinalLap()
+    if (!timeMet && !lapsMet && !finalLap) return
+
     if (pitSwapHandled || swapDismissed) return
     pitSwapHandled = true
     lastProposedSwapStint = cur.number
