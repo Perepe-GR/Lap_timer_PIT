@@ -262,6 +262,7 @@
                     } else if (meta.pin && meta.pin === pin) {
                         return true;
                     }
+                    return false; // Room exists but incorrect PIN
                 }
 
                 try {
@@ -276,14 +277,46 @@
                         } else if (teamData.pin && teamData.pin === pin) {
                             return true;
                         }
+                        return false; // Team exists but incorrect PIN
                     }
                 } catch (e) {
                     console.warn('Could not read team data:', e);
                 }
 
-                return false;
+                // If room and team do not exist yet, auto-create room and team from Pit Wall dashboard
+                const salt = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+                const pinHash = await sha256(salt, pin.trim());
+                const now = Date.now();
+                const newMeta = {
+                    code: teamName,
+                    name: teamName,
+                    circuitId: 'Circuit 1',
+                    createdBy: 'web_crew_chief',
+                    createdAt: now,
+                    pinHash: pinHash,
+                    salt: salt,
+                    leaderUid: 'web_crew_chief',
+                    mode: 'endurance',
+                    updatedAt: now
+                };
+
+                await db.ref('rooms/' + teamName + '/meta').set(newMeta);
+                await db.ref('teams/' + teamName).set({
+                    name: teamName,
+                    pinHash: pinHash,
+                    salt: salt,
+                    updatedAt: now
+                });
+                await db.ref('rooms/' + teamName + '/session').set({
+                    state: 'LOBBY',
+                    currentPilotId: '',
+                    startedAt: 0,
+                    finishedAt: 0
+                });
+
+                return true;
             } catch (err) {
-                console.error('Credential verification error:', err);
+                console.error('Credential verification & creation error:', err);
                 throw err;
             }
         }
