@@ -19,14 +19,11 @@ fun MainActivity.demoStopMs(): Long {
 fun MainActivity.maybeRequestDemoPit() {
     val d = demo ?: return
     if (!demoActive || d.pitBusy) return
-    val want = if (settings.isEndurance()) (pendingSwap != null || isFinalLap()) else demoLapsSincePit >= 3
+    val want = pendingSwap != null
     if (!want) return
-    if (settings.isEndurance()) {
-        val key = pendingSwap?.id ?: ("final-" + stint.number)
-        if (key == demoPitKey) return
-        demoPitKey = key
-    }
-    demoLapsSincePit = 0
+    val key = pendingSwap?.id ?: ("swap-" + stint.number)
+    if (key == demoPitKey) return
+    demoPitKey = key
     d.requestPit(demoStopMs())
 }
 

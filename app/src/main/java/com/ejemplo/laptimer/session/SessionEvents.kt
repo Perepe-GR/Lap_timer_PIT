@@ -13,6 +13,9 @@ fun MainActivity.showPitMessages(list: List<PitMessage>) {
         val sectors = settings.msgSectors.coerceIn(1, 10)
         activeMsgs.removeAll { it.text == m.text }
         activeMsgs.add(ActiveMsg(m.text, m.bg, sectors, now))
+        if (demoActive && (m.text.contains("BOX", true) || m.text.contains("SWAP", true) || m.text.contains("PIT", true) || m.text.contains("ENTRAR", true))) {
+            demo?.requestPit(demoStopMs())
+        }
     }
     renderBottom()
 }
@@ -97,6 +100,9 @@ fun MainActivity.applySwap(req: SwapRequest) {
 
 fun MainActivity.onPanelCommand(req: SwapRequest?) {
     pendingSwap = req
+    if (demoActive && req != null) {
+        demo?.requestPit(demoStopMs())
+    }
     if (req != null && req.confirmed && inPit) {
         applySwap(req)
         return
