@@ -849,6 +849,22 @@
                 android:text="CONFIRMAR CAMBIO"
                 android:textSize="13sp" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/pitBannerPit"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="10dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text=""
+            android:textColor="#141413"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Barra superior oculta: aparece deslizando desde arriba, se esconde sola a los 5 s -->

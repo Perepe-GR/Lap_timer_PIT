@@ -50,6 +50,7 @@ fun MainActivity.renderBottom() {
         recon != null -> {
             bindings.bottomBar.visibility = View.VISIBLE
             bindings.reconBar.visibility = View.VISIBLE; bindings.bannerPit.visibility = View.GONE; bindings.swapBar.visibility = View.GONE
+            bindings.pitBannerPit.visibility = View.GONE
         }
         msg != null -> {
             bindings.bottomBar.visibility = View.VISIBLE
@@ -59,12 +60,14 @@ fun MainActivity.renderBottom() {
         sw != null -> {
             bindings.bottomBar.visibility = View.VISIBLE
             bindings.reconBar.visibility = View.GONE; bindings.bannerPit.visibility = View.GONE; bindings.swapBar.visibility = View.VISIBLE
+            bindings.pitBannerPit.visibility = View.GONE
             val d = sw.next.ifEmpty { "driver" }
             bindings.txtSwap.text = "SWAP: Enter PIT to hand over to $d"
         }
         else -> {
             bindings.bottomBar.visibility = View.GONE
             bindings.reconBar.visibility = View.GONE; bindings.bannerPit.visibility = View.GONE; bindings.swapBar.visibility = View.GONE
+            bindings.pitBannerPit.visibility = View.GONE
         }
     }
 }

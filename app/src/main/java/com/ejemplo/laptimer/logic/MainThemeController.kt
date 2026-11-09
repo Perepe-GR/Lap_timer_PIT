@@ -52,6 +52,14 @@ fun MainActivity.solid(fill: Int, fg: Int, text: String) {
     bindings.bannerPit.background = g
     bindings.bannerPit.setTextColor(fg)
     bindings.bannerPit.text = text
+
+    val g2 = GradientDrawable()
+    g2.setColor(fill)
+    g2.cornerRadius = dp(14).toFloat()
+    bindings.pitBannerPit.background = g2
+    bindings.pitBannerPit.setTextColor(fg)
+    bindings.pitBannerPit.text = text
+    bindings.pitBannerPit.visibility = if (text.isNotBlank()) View.VISIBLE else View.GONE
 }
 
 fun MainActivity.applyMsgStyle(bg: String, text: String) {
@@ -62,14 +70,21 @@ fun MainActivity.applyMsgStyle(bg: String, text: String) {
         b == "azul" || b == "blue" -> solid(Color.parseColor("#2563EB"), Color.WHITE, text)
         b == "blanco" || b == "white" -> solid(Color.parseColor("#F2F4F7"), Color.parseColor("#141413"), text)
         b == "cuadros" || b == "rayas" || b == "finish" || b == "checkered" -> {
-            bindings.bannerPit.background = StripesDrawable(Color.parseColor("#FACC15"), Color.parseColor("#EF4444"), dp(14).toFloat())
+            val bgDrawable1 = StripesDrawable(Color.parseColor("#FACC15"), Color.parseColor("#EF4444"), dp(14).toFloat())
+            val bgDrawable2 = StripesDrawable(Color.parseColor("#FACC15"), Color.parseColor("#EF4444"), dp(14).toFloat())
+            bindings.bannerPit.background = bgDrawable1
             bindings.bannerPit.setTextColor(Color.WHITE)
+            bindings.pitBannerPit.background = bgDrawable2
+            bindings.pitBannerPit.setTextColor(Color.WHITE)
+
             val sp = SpannableString(" $text ")
             sp.setSpan(
                 BackgroundColorSpan(Color.parseColor("#E6141413")),
                 0, sp.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             bindings.bannerPit.text = sp
+            bindings.pitBannerPit.text = sp
+            bindings.pitBannerPit.visibility = if (text.isNotBlank()) View.VISIBLE else View.GONE
         }
         else -> solid(Color.parseColor("#FACC15"), Color.parseColor("#141413"), text)
     }

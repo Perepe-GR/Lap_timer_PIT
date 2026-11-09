@@ -70,4 +70,5 @@ class MainActivityBindings(activity: Activity) {
     val pitSwapBox: View = activity.findViewById(R.id.pitSwapBox)
     val txtPitSwap: TextView = activity.findViewById(R.id.txtPitSwap)
     val btnPitSwapConfirm: Button = activity.findViewById(R.id.btnPitSwapConfirm)
+    val pitBannerPit: TextView = activity.findViewById(R.id.pitBannerPit)
 }
