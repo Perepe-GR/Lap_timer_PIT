@@ -62,6 +62,7 @@ class NetSettings(context: Context) {
     var lockKmh: Int get() = p.getInt("lockKmh", 10); set(v) = store.putI("lockKmh", v.coerceAtLeast(0))
     var rangePct: Float get() = p.getFloat("rangePct", 2f); set(v) = store.putF("rangePct", v.coerceIn(0.5f, 10f))
     var msgSectors: Int get() = p.getInt("msgSectors", 2); set(v) = store.putI("msgSectors", v.coerceIn(1, 6))
+    var msgSec: Int get() = p.getInt("msgSec", 15); set(v) = store.putI("msgSec", v.coerceIn(5, 120))
     var batWarn: Int get() = p.getInt("batWarn", 20); set(v) = store.putI("batWarn", v.coerceIn(1, 90))
     var batCrit: Int get() = p.getInt("batCrit", 10); set(v) = store.putI("batCrit", v.coerceIn(1, 90))
 

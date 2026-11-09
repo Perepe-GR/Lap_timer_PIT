@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity() {
     internal val tickHandler = Handler(Looper.getMainLooper())
     internal val tick = object : Runnable {
         override fun run() {
-            updateStintStrip(); updateAlerts()
+            updateStintStrip(); updateAlerts(); pruneMsgs()
             if (inPit && clockNow() - pitStartAt > 900_000L) exitPit()
             ensureProgrammedSwap(); maybeRequestDemoPit(); checkRaceTime(); updateLapHeader()
             val fin = (isFinalLap() || isRaceFinalLap()) && !inPit

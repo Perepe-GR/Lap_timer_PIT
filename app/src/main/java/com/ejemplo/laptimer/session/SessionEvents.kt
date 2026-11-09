@@ -10,7 +10,7 @@ fun MainActivity.showPitMessages(list: List<PitMessage>) {
     if (list.isEmpty()) return
     val now = SystemClock.elapsedRealtime()
     for (m in list) {
-        val sectors = settings.msgSectors.coerceAtLeast(4)
+        val sectors = settings.msgSectors.coerceIn(1, 10)
         activeMsgs.removeAll { it.text == m.text }
         activeMsgs.add(ActiveMsg(m.text, m.bg, sectors, now))
     }
@@ -25,9 +25,14 @@ fun MainActivity.onBoundary() {
 }
 
 fun MainActivity.pruneMsgs() {
+    if (activeMsgs.isEmpty()) return
     val now = SystemClock.elapsedRealtime()
-    activeMsgs.removeAll { now - it.at > 600_000L }
-    renderBottom()
+    val timeoutMs = (settings.msgSec * 1000L).coerceIn(5_000L, 120_000L)
+    val sizeBefore = activeMsgs.size
+    activeMsgs.removeAll { now - it.at > timeoutMs }
+    if (activeMsgs.size != sizeBefore) {
+        renderBottom()
+    }
 }
 
 fun MainActivity.confirmSwap() {
