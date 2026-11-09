@@ -22,7 +22,8 @@ class GpsLocationManager(
     fun connect(activity: AppCompatActivity? = null): Boolean {
         if (internalLocationListener != null) return true
         val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!hasFine) {
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasFine && !hasCoarse) {
             if (activity != null) {
                 ActivityCompat.requestPermissions(
                     activity,
@@ -46,29 +47,38 @@ class GpsLocationManager(
         internalLocationListener = listener
 
         try {
-            val providers = try { locationManager.getProviders(true) } catch (_: Exception) { emptyList<String>() }
-            val provider = when {
-                providers.contains(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
-                providers.contains(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-                providers.isNotEmpty() -> providers[0]
-                else -> LocationManager.GPS_PROVIDER
+            var connectedAny = false
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                try {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, listener, Looper.getMainLooper())
+                    connectedAny = true
+                } catch (_: Exception) {}
             }
-            locationManager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
-            onStatus("Esperando señal GPS ($provider)...")
-            return true
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                try {
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0L, 0f, listener, Looper.getMainLooper())
+                    connectedAny = true
+                } catch (_: Exception) {}
+            }
+            if (!connectedAny) {
+                for (p in locationManager.allProviders) {
+                    try {
+                        locationManager.requestLocationUpdates(p, 0L, 0f, listener, Looper.getMainLooper())
+                        connectedAny = true
+                    } catch (_: Exception) {}
+                }
+            }
+            if (connectedAny) {
+                onStatus("Esperando señal GPS...")
+                return true
+            } else {
+                onStatus("GPS providers disabled")
+                return false
+            }
         } catch (e: SecurityException) {
             onStatus("Permiso de ubicación denegado")
             return false
         } catch (e: Exception) {
-            try {
-                for (p in locationManager.allProviders) {
-                    try {
-                        locationManager.requestLocationUpdates(p, 0L, 0f, listener, Looper.getMainLooper())
-                        onStatus("Esperando señal GPS ($p)...")
-                        return true
-                    } catch (_: Exception) {}
-                }
-            } catch (_: Exception) {}
             onStatus("Error GPS: ${e.message}")
             return false
         }
