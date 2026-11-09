@@ -21,7 +21,7 @@
       "$roomCode": {
         ".read": "auth != null",
         "meta": {
-          ".write": "auth != null && (!data.exists() || data.child('leaderUid').val() == auth.uid)"
+          ".write": "auth != null"
         },
         "members": {
           "$uid": {

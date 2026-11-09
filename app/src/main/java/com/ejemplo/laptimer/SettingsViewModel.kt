@@ -160,7 +160,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                conn.responseCode
+                val code = conn.responseCode
+                android.util.Log.i("SettingsViewModel", "PUT $path -> HTTP $code")
+                code
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsViewModel", "PUT $path FAILED: ${e.message}", e)
+                -1
             } finally {
                 try { conn.disconnect() } catch (_: Exception) {}
             }
