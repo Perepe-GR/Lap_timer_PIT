@@ -30,13 +30,13 @@
         },
         "requests": {
           "$deviceUid": {
-            ".write": "auth != null && (auth.uid == $deviceUid || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)",
-            ".validate": "newData.hasChildren(['id', 'name', 'uid', 'status']) && newData.child('uid').val() == $deviceUid"
+            ".write": "auth != null",
+            ".validate": "!newData.exists() || newData.hasChild('status')"
           }
         },
         "pending": {
           "$deviceUid": {
-            ".write": "auth != null && (auth.uid == $deviceUid || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
+            ".write": "auth != null"
           }
         },
         "instructions": {
