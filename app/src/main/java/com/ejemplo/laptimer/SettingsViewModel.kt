@@ -100,7 +100,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 val teamName = rawTeamName.uppercase()
                 val hashResult: PinHashResult = SecurityUtils.hashPin(rawPin)
 
-                // Persist locally
+                // Persist locally FIRST (always saved regardless of network state)
                 settings.enabled = current.enabled
                 settings.room = teamName
                 settings.activeRoomCode = teamName
@@ -109,15 +109,25 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 settings.salt = hashResult.salt
                 settings.intervalS = current.intervalS
 
-                // Synchronize to Firebase if telemetry/pitwall integration is enabled
+                // Synchronize to Firebase if telemetry/pitwall integration is enabled,
+                // catching any network or Firebase exceptions so local save is never blocked.
+                var firebaseError: String? = null
                 if (current.enabled) {
-                    syncTeamToFirebase(teamName, hashResult)
+                    try {
+                        syncTeamToFirebase(teamName, hashResult)
+                    } catch (e: Exception) {
+                        firebaseError = e.message
+                    }
                 }
 
                 _uiState.value = _uiState.value.copy(isLoading = false, saveSuccess = true)
-                onSuccess()
+                if (firebaseError != null) {
+                    onError("Settings saved locally. Firebase sync warning: $firebaseError")
+                } else {
+                    onSuccess()
+                }
             } catch (e: Exception) {
-                val err = "Firebase synchronization error: ${e.message}"
+                val err = "Error saving settings: ${e.message}"
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = err)
                 onError(err)
             }

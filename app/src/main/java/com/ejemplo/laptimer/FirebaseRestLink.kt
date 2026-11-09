@@ -29,6 +29,7 @@ class FirebaseRestLink(
     private var lastInstFingerprint: String? = null
     private var first = true
     private var purged = false
+    private var firstInstruction = true
 
     private val client: FirebaseRestClient get() = FirebaseRestClient(settings.dbUrl, settings.activeRoomCode.ifBlank { settings.room.ifBlank { settings.ensureRoom() } })
 
@@ -53,6 +54,7 @@ class FirebaseRestLink(
         }
         first = true
         purged = false
+        firstInstruction = true
         lastKey = null
         lastCmdId = null
         lastInstTime = 0L
@@ -172,6 +174,11 @@ class FirebaseRestLink(
                 android.util.Log.i("FirebaseRestLink", "Instruction target: '$target', App carName: '$carName', driver: '$driverName', deviceUid: '$deviceUid' -> isForUs: $isForUs")
 
                 val fingerprint = "$t:$text:$bg:$flag:$targetCar"
+                if (firstInstruction) {
+                    lastInstFingerprint = fingerprint
+                    firstInstruction = false
+                    return
+                }
                 if (isForUs && text.isNotBlank() && fingerprint != lastInstFingerprint) {
                     lastInstFingerprint = fingerprint
                     val msgId = if (t > 0L) "inst-$t" else "inst-${fingerprint.hashCode()}"
