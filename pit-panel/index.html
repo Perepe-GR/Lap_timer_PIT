@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
     <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
@@ -197,6 +198,10 @@
         const FIREBASE_URL = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app";
         firebase.initializeApp({ databaseURL: FIREBASE_URL });
         const db = firebase.database();
+        const auth = firebase.auth();
+        auth.signInAnonymously().catch(err => {
+            console.error("Firebase Anonymous Auth failed:", err);
+        });
         let activeTeamName = null;
 
         db.ref('.info/connected').on('value', snap => {
