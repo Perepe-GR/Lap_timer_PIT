@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2026-11-09
+
+### Added
+- Fourth Display Layout (`viewGpsSpeed`):
+  - Added dedicated GPS & Speed Telemetry diagnostic view with giant speed display in KM/H, refresh rate in Hz, satellite count, HDOP precision, altitude, and fix status.
+  - Updated swipe navigation cycler (`MainNavigator.kt`) to support 4 display layouts (`% 4`).
+- Web Pit Wall Dashboard Session Persistence:
+  - Implemented 24-hour persistent device session memory (`localStorage`) and Crew Chief logout controls (`🚪 Logout`).
+- Dynamic Circuit Sector Rendering on Web Panel:
+  - Replaced hardcoded 3-sector assumption with dynamic circuit sector count from telemetry, rendering `--.--` fallbacks for uncompleted sectors.
+- Robustness & Edge Case Enhancements:
+  - Automatic exponential backoff retry mechanism (up to 3 attempts) for transient REST network failures in `FirebaseRestClient`.
+  - Disk write safety (`runCatching`) in `SessionStore` and `SessionRecorder`.
+  - Persistent disk queue for unsynced telemetry laps in `FirebaseRestLink`.
+  - Plausible speed ceiling (400 km/h) and spatial jump filter (>150m in <400ms) in `GpsFilter`.
+  - 3-second pit gate debounce cooldown in `LapDetector` to prevent gate oscillation.
+  - 24-hour automatic purge of inactive offline devices from Firebase rooms (`/devices/` and `/pilots/`).
+  - Uncoupled FirebaseRestLink message polling from `settings.enabled` state so pit instructions and flags (`GREEN`, `YELLOW`, `RED`, `BLUE`, `FINISH`) always arrive instantly on all driving screens.
+
+### Changed
+- Upgraded major version to 2.5.0 (`versionCode = 160`, `versionName = "2.5.0"`, build number reset to `0`) across `build.gradle.kts`, `version.properties`, `Races.kt`, `HomeUiBuilder.kt`, and `MainDemoController.kt`.
+
 ## [2.4.0] - 2026-11-08
 
 ### Added

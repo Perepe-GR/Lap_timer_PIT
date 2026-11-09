@@ -1,4 +1,4 @@
-# Lap Timer · Version 2.4.0
+# Lap Timer · Version 2.5.0
 
 High-precision lap timing, telemetry, and endurance racing management system for circuit motorsport. Integrates native 25Hz direct USB u-blox GNSS hardware, an Android application (Kotlin), a Firebase Realtime Database backend with offline persistence, and a real-time responsive Pit Wall Web Dashboard (`index.html`) for the Crew Chief.
 
@@ -10,7 +10,7 @@ LapTimer is engineered as a hybrid distributed racing ecosystem composed of thre
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   LapTimer Ecosystem v2.4.0                 │
+│                   LapTimer Ecosystem v2.5.0                 │
 └─────────────────────────────────────────────────────────────┘
                                │
        ┌───────────────────────┼───────────────────────┐
@@ -121,11 +121,11 @@ The Crew Chief dashboard provides comprehensive pit-lane oversight and real-time
 
 ---
 
-## 5. Technical Specifications (v2.4.0)
+## 5. Technical Specifications (v2.5.0)
 
 | Specification | Value |
 |---|---|
-| **App Version** | `v2.4.0` (`versionName = "2.4.0"`, `versionCode = 125`) |
+| **App Version** | `v2.5.0` (`versionName = "2.5.0"`, `versionCode = 160`) |
 | **Android Target** | compileSdk 34, minSdk 24, targetSdk 34 |
 | **JDK & Language** | Java 17, Kotlin 1.9.0 |
 | **GPS Telemetry Rate** | 25 Hz (native u-blox USB OTG) / 10 Hz fallback / Internal GPS |

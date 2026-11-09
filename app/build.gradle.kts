@@ -10,14 +10,14 @@ val versionPropertiesFile = file("version.properties")
 val versionProps = Properties()
 
 var major = 2
-var minor = 4
+var minor = 5
 var buildNum = 0
-var vCode = 70
+var vCode = 160
 
 if (versionPropertiesFile.exists()) {
     versionPropertiesFile.inputStream().use { versionProps.load(it) }
     major = versionProps.getProperty("VERSION_MAJOR", "2").toInt()
-    minor = versionProps.getProperty("VERSION_MINOR", "4").toInt()
+    minor = versionProps.getProperty("VERSION_MINOR", "5").toInt()
     buildNum = versionProps.getProperty("VERSION_BUILD", "0").toInt()
     vCode = versionProps.getProperty("VERSION_CODE", "70").toInt()
 } else {
