@@ -48,18 +48,22 @@ fun MainActivity.renderBottom() {
     val recon = reconName; val msg = activeMsgs.lastOrNull(); val sw = pendingSwap
     when {
         recon != null -> {
+            bindings.bottomBar.visibility = View.VISIBLE
             bindings.reconBar.visibility = View.VISIBLE; bindings.bannerPit.visibility = View.GONE; bindings.swapBar.visibility = View.GONE
         }
         msg != null -> {
+            bindings.bottomBar.visibility = View.VISIBLE
             bindings.reconBar.visibility = View.GONE; bindings.bannerPit.visibility = View.VISIBLE; bindings.swapBar.visibility = View.GONE
             applyMsgStyle(msg.bg, msg.text)
         }
         sw != null -> {
+            bindings.bottomBar.visibility = View.VISIBLE
             bindings.reconBar.visibility = View.GONE; bindings.bannerPit.visibility = View.GONE; bindings.swapBar.visibility = View.VISIBLE
             val d = sw.next.ifEmpty { "driver" }
             bindings.txtSwap.text = "SWAP: Enter PIT to hand over to $d"
         }
         else -> {
+            bindings.bottomBar.visibility = View.GONE
             bindings.reconBar.visibility = View.GONE; bindings.bannerPit.visibility = View.GONE; bindings.swapBar.visibility = View.GONE
         }
     }
