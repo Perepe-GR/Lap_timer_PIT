@@ -103,6 +103,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 // Persist locally
                 settings.enabled = current.enabled
                 settings.room = teamName
+                settings.activeRoomCode = teamName
                 settings.pin = rawPin
                 settings.pinHash = hashResult.pinHash
                 settings.salt = hashResult.salt
@@ -154,16 +155,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val conn = url.openConnection() as HttpURLConnection
             return try {
                 conn.requestMethod = "PUT"
-                conn.connectTimeout = 5000
-                conn.readTimeout = 5000
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
                 conn.responseCode
-            } catch (_: Exception) {
-                -1
             } finally {
-                conn.disconnect()
+                try { conn.disconnect() } catch (_: Exception) {}
             }
         }
 
@@ -181,9 +180,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             codeTeams = putEndpoint("teams/$teamName", teamPayload)
         }
 
-        // Ignore 401/403 permission errors when room is already registered under a different leader
-        if (codeRooms !in 200..299 && codeRooms != 401 && codeRooms != 403 && codeRooms != -1) {
-            throw IOException("HTTP $codeRooms")
+        if (codeRooms !in 200..299 && codeRooms != 401 && codeRooms != 403) {
+            throw IOException("HTTP $codeRooms for rooms meta")
+        }
+        if (codeTeams !in 200..299 && codeTeams != 401 && codeTeams != 403) {
+            throw IOException("HTTP $codeTeams for teams registry")
         }
     }
 }
