@@ -144,6 +144,7 @@ class FirebaseRestLink(
         try {
             val room = settings.activeRoomCode.ifBlank { settings.room.ifBlank { settings.ensureRoom() } }
             val txt = request("GET", "rooms/$room/instructions", null, "").trim()
+            android.util.Log.d("FirebaseRestLink", "Fetched instructions raw: $txt")
             if (txt.isNotEmpty() && txt != "null" && txt.startsWith("{")) {
                 val obj = JSONObject(txt)
                 val text = obj.optString("text", "").ifBlank { obj.optString("message", "") }
@@ -152,15 +153,23 @@ class FirebaseRestLink(
                 val targetCar = obj.optString("targetCar", "ALL").ifBlank { obj.optString("carId", "ALL") }
                 val t = obj.optLong("t", obj.optLong("timestamp", 0L))
 
-                val carKey = settings.carKey()
+                val carKey = settings.carKey().uppercase()
                 val carName = settings.carName.uppercase()
                 val driverName = settings.driverName.uppercase()
+                val deviceUid = settings.deviceUid.uppercase()
+                val target = targetCar.uppercase().trim()
 
-                val isForUs = targetCar == "ALL" ||
-                              targetCar.uppercase() == "FOR_ALL" ||
-                              targetCar.uppercase() == carKey.uppercase() ||
-                              targetCar.uppercase() == carName ||
-                              targetCar.uppercase() == driverName
+                val isForUs = target == "ALL" ||
+                              target == "FOR_ALL" ||
+                              target == carKey ||
+                              target == carName ||
+                              target == driverName ||
+                              target == deviceUid ||
+                              carName.contains(target) ||
+                              driverName.contains(target) ||
+                              target.contains(carName)
+
+                android.util.Log.i("FirebaseRestLink", "Instruction target: '$target', App carName: '$carName', driver: '$driverName', deviceUid: '$deviceUid' -> isForUs: $isForUs")
 
                 val fingerprint = "$t:$text:$bg:$flag:$targetCar"
                 if (isForUs && text.isNotBlank() && fingerprint != lastInstFingerprint) {
@@ -169,7 +178,9 @@ class FirebaseRestLink(
                     onMessages(listOf(PitMessage(msgId, text, bg, flag)))
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseRestLink", "Error fetching instructions: ${e.message}", e)
+        }
     }
 
     private fun purgeInbox(car: String) {
