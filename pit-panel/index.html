@@ -245,8 +245,13 @@
 
         async function verifyTeamCredentials(teamName, pin) {
             try {
-                const metaSnap = await db.ref('rooms/' + teamName + '/meta').once('value');
-                const meta = metaSnap.val();
+                let meta = null;
+                try {
+                    const metaSnap = await db.ref('rooms/' + teamName + '/meta').once('value');
+                    meta = metaSnap.val();
+                } catch (e) {
+                    console.warn('Could not read room meta:', e);
+                }
 
                 if (meta) {
                     if (meta.pinHash && meta.salt) {
@@ -259,17 +264,21 @@
                     }
                 }
 
-                const teamSnap = await db.ref('teams/' + teamName).once('value');
-                const teamData = teamSnap.val();
-                if (teamData) {
-                    if (teamData.pinHash && teamData.salt) {
-                        const computed = await sha256(teamData.salt, pin);
-                        if (computed.toLowerCase() === teamData.pinHash.toLowerCase()) {
+                try {
+                    const teamSnap = await db.ref('teams/' + teamName).once('value');
+                    const teamData = teamSnap.val();
+                    if (teamData) {
+                        if (teamData.pinHash && teamData.salt) {
+                            const computed = await sha256(teamData.salt, pin);
+                            if (computed.toLowerCase() === teamData.pinHash.toLowerCase()) {
+                                return true;
+                            }
+                        } else if (teamData.pin && teamData.pin === pin) {
                             return true;
                         }
-                    } else if (teamData.pin && teamData.pin === pin) {
-                        return true;
                     }
+                } catch (e) {
+                    console.warn('Could not read team data:', e);
                 }
 
                 return false;

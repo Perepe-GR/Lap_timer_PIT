@@ -2,7 +2,7 @@
   "rules": {
     "teams": {
       "$teamCode": {
-        ".read": "auth != null && root.child('teams').child($teamCode).child('members').child(auth.uid).exists()",
+        ".read": "auth != null",
         "meta":     { ".write": "auth != null && !data.exists()" },
         "members":  { "$uid": { ".write": "auth != null && (auth.uid == $uid || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid)" } },
         "strategy": {
