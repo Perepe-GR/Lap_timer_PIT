@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LapTimer - Pit Wall Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -196,7 +197,14 @@
     </main>
     <script>
         const FIREBASE_URL = "https://laptimer-pit-default-rtdb.europe-west1.firebasedatabase.app";
-        firebase.initializeApp({ databaseURL: FIREBASE_URL });
+        const apiKey = (typeof CONFIG !== 'undefined' && CONFIG.FIREBASE_API_KEY) ? CONFIG.FIREBASE_API_KEY : 'AIzaSyAapqxMCk3CYkccwhPCL_5h4pWjxtKozJg';
+        firebase.initializeApp({
+            databaseURL: FIREBASE_URL,
+            apiKey: apiKey,
+            projectId: 'laptimer-pit',
+            authDomain: 'laptimer-pit.firebaseapp.com',
+            storageBucket: 'laptimer-pit.firebasestorage.app'
+        });
         const db = firebase.database();
         const auth = firebase.auth();
         auth.signInAnonymously().catch(err => {
