@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     @Volatile internal var lastKmh = 0.0
     @Volatile internal var lastCourse: Double? = null
     @Volatile internal var lastDataAt = 0L
+    internal var lastAccuracyMeters: Float? = null
     @Volatile internal var lastFixAt = 0L
     @Volatile internal var currentAlert: String? = null
     internal var hz = 0.0

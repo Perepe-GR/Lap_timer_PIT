@@ -25,6 +25,9 @@ fun MainActivity.setupGpsManagers() {
             val speedKmh = if (loc.hasSpeed()) loc.speed * 3.6 else 0.0
             val course = if (loc.hasBearing()) loc.bearing.toDouble() else null
             val time = if (loc.time > 0L) loc.time else System.currentTimeMillis()
+            if (loc.hasAccuracy()) {
+                lastAccuracyMeters = loc.accuracy
+            }
             val ev = NmeaEvent.Position(loc.latitude, loc.longitude, speedKmh, course, time)
             onPosition(ev, true)
         },

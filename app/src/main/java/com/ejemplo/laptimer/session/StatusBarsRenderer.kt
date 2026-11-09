@@ -12,10 +12,15 @@ fun MainActivity.renderGps() {
     val batInfo = BatteryEstimator.update(this)
     val batText = BatteryEstimator.formatRemainingTime(batInfo)
 
+    val accStr = lastAccuracyMeters?.let { acc ->
+        if (acc < 1.0f) String.format(Locale.US, " · ± %.0f cm", acc * 100f)
+        else String.format(Locale.US, " · ± %.1f m", acc)
+    } ?: ""
+
     val gpsStr = when {
         demoActive -> String.format(Locale.US, "DEMO ×%d · Simulated GPS %.0f Hz", demoFactor, hz)
         !hasFix -> "No GPS signal"
-        else -> String.format(Locale.US, "GPS %.0f Hz · %d sat · HDOP %.1f", hz, sats, hdop)
+        else -> String.format(Locale.US, "GPS %.0f Hz · %d sat · HDOP %.1f%s", hz, sats, hdop, accStr)
     }
     bindings.txtGps.typeface = Typeface.MONOSPACE
     bindings.txtGps.text = "$gpsStr  ·  $batText"
@@ -23,7 +28,11 @@ fun MainActivity.renderGps() {
     bindings.txtGpsSpeedBig.text = String.format(Locale.US, "%.0f", lastKmh)
     bindings.txtGpsDetailFreq.text = String.format(Locale.US, "Refresh Rate: %.1f Hz", hz)
     bindings.txtGpsDetailSats.text = String.format(Locale.US, "Satellites: %d · HDOP: %.1f", sats, hdop)
-    bindings.txtGpsDetailAlt.text = String.format(Locale.US, "Altitude: %.1f m · Fix: %s", altitude, if (hasFix) "Active (Locked)" else "Searching...")
+    val accDetail = lastAccuracyMeters?.let { acc ->
+        if (acc < 1.0f) String.format(Locale.US, " · Accuracy: %.0f cm", acc * 100f)
+        else String.format(Locale.US, " · Accuracy: %.1f m", acc)
+    } ?: ""
+    bindings.txtGpsDetailAlt.text = String.format(Locale.US, "Altitude: %.1f m%s", altitude, accDetail)
 }
 
 fun MainActivity.renderNet() {
