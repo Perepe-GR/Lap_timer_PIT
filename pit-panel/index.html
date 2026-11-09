@@ -522,20 +522,22 @@
                     return;
                 }
                 let count = 0;
-                Object.keys(requests).forEach(driverId => {
-                    const req = requests[driverId];
+                Object.keys(requests).forEach(requestKey => {
+                    const req = requests[requestKey];
                     if (req && typeof req === 'object' && (req.status === 'PENDING' || !req.status)) {
                         count++;
+                        const pid = req.id || requestKey;
+                        const pname = req.name || pid;
                         const card = document.createElement('div');
                         card.className = 'bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
                         card.innerHTML = `
                             <div>
-                                <p class="font-bold text-white text-sm">${req.name || driverId}</p>
-                                <p class="text-xs text-slate-400">ID: ${req.id || driverId}</p>
+                                <p class="font-bold text-white text-sm">${pname}</p>
+                                <p class="text-xs text-slate-400">ID: ${pid} · Device: ${requestKey}</p>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'ACCEPTED')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Accept</button>
-                                <button onclick="updatePilotStatus('${teamName}', '${driverId}', 'REJECTED')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Reject</button>
+                                <button onclick="updatePilotStatus('${teamName}', '${requestKey}', 'ACCEPTED', '${pid}', '${pname}')" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded text-xs font-bold text-white">Accept</button>
+                                <button onclick="updatePilotStatus('${teamName}', '${requestKey}', 'REJECTED', '${pid}', '${pname}')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-bold text-white">Reject</button>
                             </div>
                         `;
                         container.appendChild(card);
@@ -666,13 +668,27 @@
             }
         }
 
-        window.updatePilotStatus = function(teamName, driverId, status) {
+        window.updatePilotStatus = function(teamName, requestKey, status, pilotId, pilotName) {
             try {
                 const updateObj = { status: status };
-                db.ref(`rooms/${teamName}/requests/${driverId}`).update(updateObj);
-                db.ref(`rooms/${teamName}/pending/${driverId}`).update(updateObj);
+                db.ref(`rooms/${teamName}/requests/${requestKey}`).update(updateObj);
+                db.ref(`rooms/${teamName}/pending/${requestKey}`).update(updateObj);
+
+                const pid = pilotId || requestKey;
+                const pName = pilotName || pid;
+
                 if (status === 'ACCEPTED') {
-                    db.ref(`rooms/${teamName}/pilots/${driverId}/info`).update({ status: 'READY', lastSeenTs: Date.now() });
+                    db.ref(`rooms/${teamName}/pilots/${pid}/info`).update({
+                        id: pid,
+                        name: pName,
+                        status: 'READY',
+                        lastSeenTs: Date.now()
+                    });
+                    db.ref(`rooms/${teamName}/members/${requestKey}`).update({
+                        role: 'pilot',
+                        name: pName,
+                        t: Date.now()
+                    });
                 }
             } catch (err) {
                 console.error('Error updating pilot status:', err);
