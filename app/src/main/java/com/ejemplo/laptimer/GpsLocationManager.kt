@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat
 
 class GpsLocationManager(
     private val context: Context,
-    private val onLocationChanged: (Location) -> Unit,
+    private val locationCallback: (Location) -> Unit,
     private val onStatus: (String) -> Unit
 ) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -37,7 +37,7 @@ class GpsLocationManager(
 
         val listener = object : LocationListener {
             override fun onLocationChanged(loc: Location) {
-                onLocationChanged(loc)
+                locationCallback(loc)
             }
             override fun onProviderEnabled(provider: String) {}
             override fun onProviderDisabled(provider: String) {
