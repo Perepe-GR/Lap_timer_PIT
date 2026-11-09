@@ -149,9 +149,21 @@ class FirebaseRestLink(
                 val text = obj.optString("text", "").ifBlank { obj.optString("message", "") }
                 val bg = obj.optString("bg", "amarillo")
                 val flag = obj.optString("flag", "")
+                val targetCar = obj.optString("targetCar", "ALL").ifBlank { obj.optString("carId", "ALL") }
                 val t = obj.optLong("t", obj.optLong("timestamp", 0L))
-                val fingerprint = "$t:$text:$bg:$flag"
-                if (text.isNotBlank() && fingerprint != lastInstFingerprint) {
+
+                val carKey = settings.carKey()
+                val carName = settings.carName.uppercase()
+                val driverName = settings.driverName.uppercase()
+
+                val isForUs = targetCar == "ALL" ||
+                              targetCar.uppercase() == "FOR_ALL" ||
+                              targetCar.uppercase() == carKey.uppercase() ||
+                              targetCar.uppercase() == carName ||
+                              targetCar.uppercase() == driverName
+
+                val fingerprint = "$t:$text:$bg:$flag:$targetCar"
+                if (isForUs && text.isNotBlank() && fingerprint != lastInstFingerprint) {
                     lastInstFingerprint = fingerprint
                     val msgId = if (t > 0L) "inst-$t" else "inst-${fingerprint.hashCode()}"
                     onMessages(listOf(PitMessage(msgId, text, bg, flag)))

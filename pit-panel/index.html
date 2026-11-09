@@ -66,6 +66,12 @@
                         <h3 class="text-base font-bold mb-3 text-emerald-400 flex items-center gap-2">
                             <span>📢 Send Track Instruction</span>
                         </h3>
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Target Car / Driver</label>
+                            <select id="instruction-target-car" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                                <option value="ALL">📢 Broadcast to All Cars (All Pilots)</option>
+                            </select>
+                        </div>
                         <form id="instruction-form" class="space-y-3">
                             <div class="flex gap-2">
                                 <input type="text" id="instruction-input" placeholder="e.g. Enter this lap / Save battery"
@@ -553,7 +559,47 @@
             return min > 0 ? `${min}:${secStr}` : secStr;
         }
 
+        function updateTargetCarSelector(liveData) {
+            const select = document.getElementById('instruction-target-car');
+            if (!select) return;
+            const currentVal = select.value;
+            select.innerHTML = '<option value="ALL">📢 Broadcast to All Cars (All Pilots)</option>';
+            if (liveData && typeof liveData === 'object') {
+                Object.keys(liveData).forEach(carId => {
+                    const t = liveData[carId];
+                    if (t && typeof t === 'object') {
+                        const carName = t.car || t.carName || carId;
+                        const driverName = t.driver || t.driverName || 'Driver 1';
+                        const opt = document.createElement('option');
+                        opt.value = carName;
+                        opt.textContent = `🏎️ ${carName} (${driverName})`;
+                        select.appendChild(opt);
+                    }
+                });
+            }
+            if (window.teamPilotsData && typeof window.teamPilotsData === 'object') {
+                Object.keys(window.teamPilotsData).forEach(driverId => {
+                    const pilot = window.teamPilotsData[driverId];
+                    if (pilot && pilot.info && pilot.info.status === 'ACCEPTED') {
+                        const driverName = pilot.info.name || driverId;
+                        let exists = false;
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].value.toLowerCase() === driverName.toLowerCase()) exists = true;
+                        }
+                        if (!exists) {
+                            const opt = document.createElement('option');
+                            opt.value = driverName;
+                            opt.textContent = `👤 Driver: ${driverName}`;
+                            select.appendChild(opt);
+                        }
+                    }
+                });
+            }
+            if (currentVal) select.value = currentVal;
+        }
+
         function renderLiveTiming(liveData) {
+            updateTargetCarSelector(liveData);
             const tbody = document.getElementById('live-timing-tbody');
             if (!tbody) return;
             tbody.innerHTML = '';
@@ -724,10 +770,12 @@
 
         window.sendQuickCommand = function(commandText, bgKey = 'amarillo') {
             if (!activeTeamName || !commandText) return;
+            const targetCar = document.getElementById('instruction-target-car')?.value || 'ALL';
             db.ref(`rooms/${activeTeamName}/instructions`).set({
                 text: commandText,
                 message: commandText,
                 bg: bgKey,
+                targetCar: targetCar,
                 timestamp: Date.now(),
                 t: Date.now()
             }).then(() => {
@@ -740,11 +788,13 @@
 
         window.sendFlag = function(flagType, text, bgKey) {
             if (!activeTeamName) return;
+            const targetCar = document.getElementById('instruction-target-car')?.value || 'ALL';
             db.ref(`rooms/${activeTeamName}/instructions`).set({
                 text: text,
                 message: text,
                 flag: flagType,
                 bg: bgKey,
+                targetCar: targetCar,
                 timestamp: Date.now(),
                 t: Date.now()
             }).catch(err => {
@@ -756,11 +806,13 @@
             e.preventDefault();
             const message = document.getElementById('instruction-input').value.trim();
             if (!message || !activeTeamName) return;
+            const targetCar = document.getElementById('instruction-target-car')?.value || 'ALL';
 
             db.ref(`rooms/${activeTeamName}/instructions`).set({
                 text: message,
                 message: message,
                 bg: 'amarillo',
+                targetCar: targetCar,
                 timestamp: Date.now(),
                 t: Date.now()
             }).then(() => {
