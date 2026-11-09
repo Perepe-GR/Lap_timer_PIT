@@ -442,53 +442,65 @@
             checkSavedPitSession();
         });
 
+        window.pitCache = {
+            requests: null,
+            pilots: null,
+            drivers: null,
+            devices: null,
+            currentPilotId: null,
+            live: null
+        };
+
+        let renderTimeout = null;
+        function scheduleRender(teamName) {
+            if (renderTimeout) return;
+            renderTimeout = setTimeout(() => {
+                renderTimeout = null;
+                renderPendingRequests(teamName, window.pitCache.requests);
+                renderAcceptedPilots(teamName, window.pitCache.requests);
+            }, 50);
+        }
+
         function initPitListeners(teamName) {
             db.ref(`rooms/${teamName}/requests`).on('value', snapshot => {
-                renderPendingRequests(teamName, snapshot.val());
-                renderAcceptedPilots(teamName, snapshot.val());
-            }, err => {
-                console.warn('Error reading requests:', err);
-                renderPendingRequests(teamName, null);
-                renderAcceptedPilots(teamName, null);
-            });
+                window.pitCache.requests = snapshot.val();
+                scheduleRender(teamName);
+            }, err => { console.warn('Error reading requests:', err); });
+
             db.ref(`rooms/${teamName}/pending`).on('value', snapshot => {
-                renderPendingRequests(teamName, snapshot.val());
-            }, err => {
-                console.warn('Error reading pending:', err);
-            });
+                if (snapshot.val() && typeof snapshot.val() === 'object') {
+                    window.pitCache.requests = Object.assign({}, snapshot.val(), window.pitCache.requests);
+                    scheduleRender(teamName);
+                }
+            }, err => { console.warn('Error reading pending:', err); });
+
             db.ref(`rooms/${teamName}/pilots`).on('value', snapshot => {
+                window.pitCache.pilots = snapshot.val();
                 window.teamPilotsData = snapshot.val();
-                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
-                    renderAcceptedPilots(teamName, snap.val());
-                });
-            }, err => {
-                console.warn('Error reading pilots:', err);
-            });
+                scheduleRender(teamName);
+            }, err => { console.warn('Error reading pilots:', err); });
+
             db.ref(`rooms/${teamName}/drivers`).on('value', snapshot => {
+                window.pitCache.drivers = snapshot.val();
                 window.teamDriversData = snapshot.val();
-                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
-                    renderAcceptedPilots(teamName, snap.val());
-                });
-            }, err => {
-                console.warn('Error reading drivers:', err);
-            });
+                scheduleRender(teamName);
+            }, err => { console.warn('Error reading drivers:', err); });
+
             db.ref(`rooms/${teamName}/devices`).on('value', snapshot => {
+                window.pitCache.devices = snapshot.val();
                 window.teamDevicesData = snapshot.val();
                 purgeStaleDevices(teamName, window.teamDevicesData);
-                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
-                    renderAcceptedPilots(teamName, snap.val());
-                });
-            }, err => {
-                console.warn('Error reading devices:', err);
-            });
+                scheduleRender(teamName);
+            }, err => { console.warn('Error reading devices:', err); });
+
             db.ref(`rooms/${teamName}/session/currentPilotId`).on('value', snapshot => {
+                window.pitCache.currentPilotId = snapshot.val();
                 window.currentActiveDriverId = snapshot.val();
-                // Re-render accepted list to highlight current driver
-                db.ref(`rooms/${teamName}/requests`).once('value').then(snap => {
-                    renderAcceptedPilots(teamName, snap.val());
-                });
-            });
+                scheduleRender(teamName);
+            }, err => { console.warn('Error reading currentPilotId:', err); });
+
             db.ref(`rooms/${teamName}/live`).on('value', snapshot => {
+                window.pitCache.live = snapshot.val();
                 renderLiveTiming(snapshot.val());
             }, err => {
                 console.warn('Error reading live telemetry:', err);
