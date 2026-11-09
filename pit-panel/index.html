@@ -250,6 +250,9 @@
 
         async function verifyTeamCredentials(teamName, pin) {
             try {
+                if (!auth.currentUser) {
+                    await auth.signInAnonymously();
+                }
                 let meta = null;
                 try {
                     const metaSnap = await db.ref('rooms/' + teamName + '/meta').once('value');
