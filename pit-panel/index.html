@@ -265,11 +265,15 @@
         async function verifyTeamCredentials(teamName, pin) {
             try {
                 console.log("verifyTeamCredentials start for team:", teamName);
-                try {
-                    if (auth && typeof auth.signInAnonymously === 'function' && !auth.currentUser) {
-                        await auth.signInAnonymously().catch(() => {});
+                if (!auth.currentUser) {
+                    console.log("Attempting signInAnonymously...");
+                    try {
+                        await auth.signInAnonymously();
+                    } catch (authErr) {
+                        console.error("Anonymous auth error:", authErr);
                     }
-                } catch (e) {}
+                }
+                console.log("Auth user UID:", auth.currentUser ? auth.currentUser.uid : "none");
 
                 let meta = null;
                 try {
@@ -284,20 +288,14 @@
                     if (meta.pinHash && meta.salt) {
                         const computed = await sha256(meta.salt, pin);
                         console.log("Comparing hashes. Computed:", computed, "Stored:", meta.pinHash);
-                        if (computed.toLowerCase() === meta.pinHash.toLowerCase() || pin === "123456" || pin === "1234" || pin === meta.pin) {
+                        if (computed.toLowerCase() === meta.pinHash.toLowerCase() || pin === meta.pin) {
                             return true;
                         }
                     } else if (meta.pin && meta.pin === pin) {
                         return true;
                     }
-                    console.log("Room exists. Bulletproof fallback: allowing login and updating credentials.");
-                    const newSalt = Math.random().toString(36).substring(2);
-                    const newHash = await sha256(newSalt, pin.trim());
-                    await db.ref('rooms/' + teamName + '/meta').update({
-                        pinHash: newHash,
-                        salt: newSalt
-                    });
-                    return true;
+                    console.log("Room exists but PIN did not match.");
+                    return false;
                 }
 
                 try {
@@ -307,19 +305,14 @@
                     if (teamData) {
                         if (teamData.pinHash && teamData.salt) {
                             const computed = await sha256(teamData.salt, pin);
-                            if (computed.toLowerCase() === teamData.pinHash.toLowerCase() || pin === "123456" || pin === "1234" || pin === teamData.pin) {
+                            if (computed.toLowerCase() === teamData.pinHash.toLowerCase() || pin === teamData.pin) {
                                 return true;
                             }
                         } else if (teamData.pin && teamData.pin === pin) {
                             return true;
                         }
-                        const newSalt = Math.random().toString(36).substring(2);
-                        const newHash = await sha256(newSalt, pin.trim());
-                        await db.ref('teams/' + teamName).update({
-                            pinHash: newHash,
-                            salt: newSalt
-                        });
-                        return true;
+                        console.log("Team exists but PIN did not match.");
+                        return false;
                     }
                 } catch (e) {
                     console.warn('Could not read team data:', e);
