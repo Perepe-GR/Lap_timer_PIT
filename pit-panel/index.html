@@ -817,30 +817,6 @@
             }
             return null;
         }
-                            secArr.push(`S${sk}: ${formatMs(l.sectors[sk])}`);
-                        });
-                        sectorsText = secArr.join(' · ');
-                    } else if (Array.isArray(l.s)) {
-                        sectorsText = l.s.map((sp, idx) => `S${idx+1}: ${formatMs(sp)}`).join(' · ');
-                    }
-
-                    const row = document.createElement('tr');
-                    row.className = 'hover:bg-slate-800/50';
-                    row.innerHTML = `
-                        <td class="p-2 text-center font-bold text-amber-400">${lapNum}</td>
-                        <td class="p-2 text-right font-bold text-emerald-400">${lapTime}</td>
-                        <td class="p-2 text-center text-slate-300 font-sans">${driver}</td>
-                        <td class="p-2 text-center text-slate-400 text-xs">${sectorsText}</td>
-                    `;
-                    tBody.appendChild(row);
-                });
-            }).catch(err => {
-                const contentDiv = document.getElementById(`history-content-${nextRowId}`);
-                if (contentDiv) {
-                    contentDiv.innerHTML = `<p class="text-red-400 text-xs italic text-center py-2">Error loading lap history: ${err.message}</p>`;
-                }
-            });
-        };
 
         window.updatePilotStatus = function(teamName, requestKey, status, pilotId, pilotName) {
             try {
