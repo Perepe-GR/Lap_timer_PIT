@@ -29,7 +29,16 @@
     <main class="flex-grow p-6 max-w-7xl mx-auto w-full">
         <section id="login-section" class="max-w-md mx-auto mt-20 bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-2xl">
             <h2 class="text-2xl font-bold mb-2 text-center text-white">Pit Wall Access</h2>
-            <p class="text-xs text-slate-400 mb-6 text-center">Enter team identifier (6-15 characters) and numeric access PIN.</p>
+            <p class="text-xs text-slate-400 mb-4 text-center">Enter team identifier (6-15 characters) and numeric access PIN.</p>
+
+            <div class="flex border-b border-slate-700 mb-4">
+                <button type="button" id="tab-login-existing" onclick="setLoginMode('existing')" class="flex-1 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-red-500 text-white">
+                    Connect to Team
+                </button>
+                <button type="button" id="tab-login-create" onclick="setLoginMode('create')" class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent hover:text-slate-200">
+                    Create New Team
+                </button>
+            </div>
 
             <div id="login-error-msg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-2.5 rounded-lg text-xs font-semibold mb-4 text-center">
                 Error: Team not found or incorrect PIN.
@@ -262,47 +271,57 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        window.currentLoginMode = 'existing';
+
+        window.setLoginMode = function(mode) {
+            window.currentLoginMode = mode;
+            const btnExisting = document.getElementById('tab-login-existing');
+            const btnCreate = document.getElementById('tab-login-create');
+            if (mode === 'existing') {
+                btnExisting.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-red-500 text-white";
+                btnCreate.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent hover:text-slate-200";
+            } else {
+                btnCreate.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-red-500 text-white";
+                btnExisting.className = "flex-1 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent hover:text-slate-200";
+            }
+        };
+
         async function verifyTeamCredentials(teamName, pin) {
             try {
-                console.log("verifyTeamCredentials start for team:", teamName);
                 if (!auth.currentUser) {
-                    console.log("Attempting signInAnonymously...");
-                    try {
-                        await auth.signInAnonymously();
-                    } catch (authErr) {
-                        console.error("Anonymous auth error:", authErr);
-                    }
+                    try { await auth.signInAnonymously(); } catch (e) {}
                 }
-                console.log("Auth user UID:", auth.currentUser ? auth.currentUser.uid : "none");
 
                 let meta = null;
                 try {
                     const metaSnap = await db.ref('rooms/' + teamName + '/meta').once('value');
                     meta = metaSnap.val();
-                    console.log("Fetched room meta:", meta);
                 } catch (e) {
                     console.warn('Could not read room meta:', e);
                 }
 
                 if (meta) {
+                    if (window.currentLoginMode === 'create') {
+                        throw new Error('Team name already exists. Please choose a different team name or connect to existing.');
+                    }
                     if (meta.pinHash && meta.salt) {
                         const computed = await sha256(meta.salt, pin);
-                        console.log("Comparing hashes. Computed:", computed, "Stored:", meta.pinHash);
                         if (computed.toLowerCase() === meta.pinHash.toLowerCase() || pin === meta.pin) {
                             return true;
                         }
                     } else if (meta.pin && meta.pin === pin) {
                         return true;
                     }
-                    console.log("Room exists but PIN did not match.");
                     return false;
                 }
 
                 try {
                     const teamSnap = await db.ref('teams/' + teamName).once('value');
                     const teamData = teamSnap.val();
-                    console.log("Fetched team data:", teamData);
                     if (teamData) {
+                        if (window.currentLoginMode === 'create') {
+                            throw new Error('Team name already exists. Please choose a different team name or connect to existing.');
+                        }
                         if (teamData.pinHash && teamData.salt) {
                             const computed = await sha256(teamData.salt, pin);
                             if (computed.toLowerCase() === teamData.pinHash.toLowerCase() || pin === teamData.pin) {
@@ -311,12 +330,48 @@
                         } else if (teamData.pin && teamData.pin === pin) {
                             return true;
                         }
-                        console.log("Team exists but PIN did not match.");
                         return false;
                     }
                 } catch (e) {
                     console.warn('Could not read team data:', e);
                 }
+
+                if (window.currentLoginMode === 'existing') {
+                    return false; // Team not found for existing login
+                }
+
+                // If mode === 'create' and room does not exist, create new team and room
+                const salt = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+                const pinHash = await sha256(salt, pin.trim());
+                const now = Date.now();
+                const newMeta = {
+                    code: teamName,
+                    name: teamName,
+                    circuitId: 'Circuit 1',
+                    createdBy: auth.currentUser ? auth.currentUser.uid : 'web_crew_chief',
+                    createdAt: now,
+                    pinHash: pinHash,
+                    salt: salt,
+                    leaderUid: auth.currentUser ? auth.currentUser.uid : 'web_crew_chief',
+                    mode: 'endurance',
+                    updatedAt: now
+                };
+
+                await db.ref('rooms/' + teamName + '/meta').set(newMeta);
+                await db.ref('teams/' + teamName).set({
+                    name: teamName,
+                    pinHash: pinHash,
+                    salt: salt,
+                    updatedAt: now
+                });
+                await db.ref('rooms/' + teamName + '/session').set({
+                    state: 'LOBBY',
+                    currentPilotId: '',
+                    startedAt: 0,
+                    finishedAt: 0
+                });
+
+                return true;
 
                 console.log("Room and team not found. Auto-creating room/team...");
                 const salt = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
@@ -707,22 +762,24 @@
                             const contentDiv = document.getElementById(`history-content-${nextRowId}`);
                             if (!contentDiv) return;
 
-                            if (!lapsData || typeof lapsData !== 'object') {
-                                contentDiv.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-2">No completed laps recorded yet for ${carName}. (Negative Test: Ready)</p>`;
-                                return;
+                            window.renderedLapCounts = window.renderedLapCounts || {};
+                            let lapsList = [];
+                            if (lapsData && typeof lapsData === 'object') {
+                                Object.keys(lapsData).forEach(key => {
+                                    const l = lapsData[key];
+                                    if (l && typeof l === 'object') {
+                                        lapsList.push(l);
+                                    }
+                                });
                             }
 
-                            let lapsList = [];
-                            Object.keys(lapsData).forEach(key => {
-                                const l = lapsData[key];
-                                if (l && typeof l === 'object') {
-                                    lapsList.push(l);
-                                }
-                            });
+                            const currentCount = lapsList.length;
+                            if (window.renderedLapCounts[nextRowId] === currentCount && document.getElementById(`laps-tbody-${nextRowId}`)) {
+                                return;
+                            }
+                            window.renderedLapCounts[nextRowId] = currentCount;
 
-                            lapsList.sort((a, b) => (a.n || a.number || 0) - (b.n || b.number || 0));
-
-                            if (lapsList.length === 0) {
+                            if (currentCount === 0) {
                                 contentDiv.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-2">No completed laps recorded yet for ${carName}. (Negative Test: Ready)</p>`;
                                 return;
                             }
