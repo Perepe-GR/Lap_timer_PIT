@@ -372,40 +372,6 @@
                 });
 
                 return true;
-
-                console.log("Room and team not found. Auto-creating room/team...");
-                const salt = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-                const pinHash = await sha256(salt, pin.trim());
-                const now = Date.now();
-                const newMeta = {
-                    code: teamName,
-                    name: teamName,
-                    circuitId: 'Circuit 1',
-                    createdBy: auth.currentUser ? auth.currentUser.uid : 'web_crew_chief',
-                    createdAt: now,
-                    pinHash: pinHash,
-                    salt: salt,
-                    leaderUid: auth.currentUser ? auth.currentUser.uid : 'web_crew_chief',
-                    mode: 'endurance',
-                    updatedAt: now
-                };
-
-                await db.ref('rooms/' + teamName + '/meta').set(newMeta);
-                await db.ref('teams/' + teamName).set({
-                    name: teamName,
-                    pinHash: pinHash,
-                    salt: salt,
-                    updatedAt: now
-                });
-                await db.ref('rooms/' + teamName + '/session').set({
-                    state: 'LOBBY',
-                    currentPilotId: '',
-                    startedAt: 0,
-                    finishedAt: 0
-                });
-
-                console.log("Auto-creation complete. Login successful.");
-                return true;
             } catch (err) {
                 console.error('Credential verification & creation error (fallback bypass):', err);
                 return true; // Bulletproof fallback bypass for zero login lockouts
