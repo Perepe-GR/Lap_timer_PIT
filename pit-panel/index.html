@@ -671,6 +671,9 @@
                             <span class="inline-block w-3 h-3 rounded-full ${dotColor}" title="${titleText}"></span>
                         </td>
                     `;
+                    tr.style.cursor = 'pointer';
+                    tr.title = 'Click to toggle session lap history';
+                    tr.onclick = () => toggleCarLapHistory(activeTeamName, carName, carId, tr);
                     tbody.appendChild(tr);
                 }
             });
@@ -679,6 +682,111 @@
                 tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500 italic">Waiting for live telemetry data from connected cars...</td></tr>';
             }
         }
+
+        window.toggleCarLapHistory = function(teamName, carName, carId, rowElement) {
+            const nextRowId = `history-row-${carId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const existingRow = document.getElementById(nextRowId);
+            if (existingRow) {
+                existingRow.remove();
+                return;
+            }
+
+            const expTr = document.createElement('tr');
+            expTr.id = nextRowId;
+            expTr.className = 'bg-slate-950/80 border-b border-slate-700/60';
+            expTr.innerHTML = `
+                <td colspan="8" class="p-4">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-sky-400 text-sm flex items-center gap-2">
+                                <span>📈 Session Lap History · ${carName}</span>
+                            </h4>
+                            <span class="text-xs text-slate-400 italic">Click row again to collapse</span>
+                        </div>
+                        <div id="history-content-${nextRowId}" class="max-h-60 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900/60 p-2">
+                            <p class="text-slate-500 text-xs italic text-center py-2">Loading session laps from Firebase (/laps/${carName})...</p>
+                        </div>
+                    </div>
+                </td>
+            `;
+            rowElement.after(expTr);
+
+            const lapsRef = db.ref(`rooms/${teamName}/laps/${carName}`);
+            lapsRef.once('value').then(snapshot => {
+                const lapsData = snapshot.val();
+                const contentDiv = document.getElementById(`history-content-${nextRowId}`);
+                if (!contentDiv) return;
+
+                if (!lapsData || typeof lapsData !== 'object') {
+                    contentDiv.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-2">No completed laps recorded yet for ${carName}.</p>`;
+                    return;
+                }
+
+                let lapsList = [];
+                Object.keys(lapsData).forEach(key => {
+                    const l = lapsData[key];
+                    if (l && typeof l === 'object') {
+                        lapsList.push(l);
+                    }
+                });
+
+                lapsList.sort((a, b) => (a.n || a.number || 0) - (b.n || b.number || 0));
+
+                if (lapsList.length === 0) {
+                    contentDiv.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-2">No completed laps recorded yet for ${carName}.</p>`;
+                    return;
+                }
+
+                const table = document.createElement('table');
+                table.className = 'w-full text-left border-collapse text-xs';
+                table.innerHTML = `
+                    <thead>
+                        <tr class="border-b border-slate-700 text-slate-400 uppercase bg-slate-900">
+                            <th class="p-2 text-center">Lap</th>
+                            <th class="p-2 font-mono text-right">Time</th>
+                            <th class="p-2 text-center">Driver</th>
+                            <th class="p-2 text-center">Sectors</th>
+                        </tr>
+                    </thead>
+                    <tbody id="laps-tbody-${nextRowId}" class="divide-y divide-slate-800 font-mono"></tbody>
+                `;
+                contentDiv.innerHTML = '';
+                contentDiv.appendChild(table);
+
+                const tBody = document.getElementById(`laps-tbody-${nextRowId}`);
+                lapsList.forEach(l => {
+                    const lapNum = l.n !== undefined ? l.n : (l.number || '-');
+                    const lapTime = formatMs(l.ms !== undefined ? l.ms : l.lapMs);
+                    const driver = l.d || l.driver || 'Driver 1';
+
+                    let sectorsText = '--.--';
+                    if (l.sectors && typeof l.sectors === 'object') {
+                        let secArr = [];
+                        Object.keys(l.sectors).sort().forEach(sk => {
+                            secArr.push(`S${sk}: ${formatMs(l.sectors[sk])}`);
+                        });
+                        sectorsText = secArr.join(' · ');
+                    } else if (Array.isArray(l.s)) {
+                        sectorsText = l.s.map((sp, idx) => `S${idx+1}: ${formatMs(sp)}`).join(' · ');
+                    }
+
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-800/50';
+                    row.innerHTML = `
+                        <td class="p-2 text-center font-bold text-amber-400">${lapNum}</td>
+                        <td class="p-2 text-right font-bold text-emerald-400">${lapTime}</td>
+                        <td class="p-2 text-center text-slate-300 font-sans">${driver}</td>
+                        <td class="p-2 text-center text-slate-400 text-xs">${sectorsText}</td>
+                    `;
+                    tBody.appendChild(row);
+                });
+            }).catch(err => {
+                const contentDiv = document.getElementById(`history-content-${nextRowId}`);
+                if (contentDiv) {
+                    contentDiv.innerHTML = `<p class="text-red-400 text-xs italic text-center py-2">Error loading lap history: ${err.message}</p>`;
+                }
+            });
+        };
 
         window.updatePilotStatus = function(teamName, requestKey, status, pilotId, pilotName) {
             try {
