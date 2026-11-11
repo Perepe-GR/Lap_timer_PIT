@@ -265,11 +265,11 @@
         async function verifyTeamCredentials(teamName, pin) {
             try {
                 console.log("verifyTeamCredentials start for team:", teamName);
-                if (!auth.currentUser) {
-                    console.log("Signing in anonymously...");
-                    await auth.signInAnonymously();
-                }
-                console.log("Auth user UID:", auth.currentUser ? auth.currentUser.uid : "none");
+                try {
+                    if (auth && typeof auth.signInAnonymously === 'function' && !auth.currentUser) {
+                        await auth.signInAnonymously().catch(() => {});
+                    }
+                } catch (e) {}
 
                 let meta = null;
                 try {

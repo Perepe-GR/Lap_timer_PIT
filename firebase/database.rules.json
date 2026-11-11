@@ -2,72 +2,20 @@
   "rules": {
     "teams": {
       "$teamCode": {
-        ".read": "auth != null",
-        ".write": "auth != null",
-        "meta":     { ".write": "auth != null && !data.exists()" },
-        "members":  { "$uid": { ".write": "auth != null && (auth.uid == $uid || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid)" } },
-        "strategy": {
-          ".write": "auth != null && root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid"
-        },
-        "session":  { ".write": "auth != null && root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid" },
-        "pilots":   {
-          "$pilotId": {
-            ".write": "auth != null && (auth.uid == $pilotId || root.child('teams').child($teamCode).child('strategy').child('leaderUid').val() == auth.uid)"
-          }
-        }
+        ".read": "true",
+        ".write": "true"
       }
     },
     "rooms": {
       "$roomCode": {
-        ".read": "auth != null",
-        "meta": {
-          ".write": "auth != null"
-        },
-        "members": {
-          "$uid": {
-            ".write": "auth != null && (auth.uid == $uid || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
-          }
-        },
-        "requests": {
-          "$deviceUid": {
-            ".write": "auth != null",
-            ".validate": "!newData.exists() || newData.hasChild('status')"
-          }
-        },
-        "pending": {
-          "$deviceUid": {
-            ".write": "auth != null"
-          }
-        },
-        "instructions": {
-          ".write": "auth != null"
-        },
-        "live": {
-          "$carId": {
-            ".write": "auth != null"
-          }
-        },
-        "laps": {
-          "$carId": {
-            ".write": "auth != null"
-          }
-        },
-        "pilots": {
-          "$pilotId": {
-            ".write": "auth != null && (auth.uid == $pilotId || root.child('rooms').child($roomCode).child('meta').child('leaderUid').val() == auth.uid)"
-          }
-        },
-        "devices": {
-          "$deviceUid": {
-            ".write": "auth != null"
-          }
-        }
+        ".read": "true",
+        ".write": "true"
       }
     },
     "circuits": {
       ".read": "true",
       "$circuitKey": {
-        ".write": "auth != null && (newData.exists() || root.child('admins').child(auth.uid).exists() || auth.token.admin == true)"
+        ".write": "true"
       }
     }
   }
