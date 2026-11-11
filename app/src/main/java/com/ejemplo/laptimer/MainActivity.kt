@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var gpsLocationManager: GpsLocationManager
     internal lateinit var imuSensorManager: ImuSensorManager
     @Volatile internal var lastImuData = com.ejemplo.laptimer.engine.ImuTelemetryData()
+    internal val phase1Engine = com.ejemplo.laptimer.engine.Phase1PerformanceEngine()
 
     internal lateinit var raceStore: RaceStore
     internal var race: RaceRecord? = null

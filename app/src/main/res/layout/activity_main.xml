@@ -580,6 +580,26 @@
                         android:text="Altitude: -- m · Fix: Active"
                         android:textColor="#9AA3AE"
                         android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/txtGamifiedConsistency"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Consistency Score: 100%"
+                        android:textColor="#38BDF8"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/txtGamifiedExecution"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ideal Execution: 100%"
+                        android:textColor="#A855F7"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
@@ -627,6 +647,17 @@
                         android:textColor="#C6F432"
                         android:textSize="18sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtGamifiedSmoothness"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-condensed"
+                        android:text="Smoothness (Jerk): 0.00 G/s"
+                        android:textColor="#FACC15"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
 
                 <!-- Barra Lateral Vertical Z (Impactos / Rebotes) -->

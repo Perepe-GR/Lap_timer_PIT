@@ -63,6 +63,7 @@ class SessionSettingsActivity : PageActivity() {
             String.format(Locale.US, "%.1f", settings.rangePct), true
         )
         val etSum = numField(c1, "Lap Summary Display Duration (seconds)", settings.lapSummarySec.toString())
+        val swGamified = check(c1, "Gamified Performance Metrics", settings.gamifiedMetricsEnabled)
 
         val cGps = card("Position / GPS Receiver Source")
         label(cGps, "Select GPS receiver source:")
@@ -136,6 +137,7 @@ class SessionSettingsActivity : PageActivity() {
                         settings.inlapCounts = cbIn.isChecked
                         settings.demoStopSec = etDemo.text.toString().toIntOrNull() ?: 0
                         settings.saveTrace = swTrace.isChecked
+                        settings.gamifiedMetricsEnabled = swGamified.isChecked
                         settings.gpsSource = gpsChoice()
 
                         runOnUiThread {

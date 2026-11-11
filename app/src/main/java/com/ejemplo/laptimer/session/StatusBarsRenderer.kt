@@ -33,6 +33,18 @@ fun MainActivity.renderGps() {
         else String.format(Locale.US, " · Accuracy: %.1f m", acc)
     } ?: ""
     bindings.txtGpsDetailAlt.text = String.format(Locale.US, "Altitude: %.1f m%s", altitude, accDetail)
+
+    if (settings.gamifiedMetricsEnabled) {
+        val best = race?.bestMs() ?: lastState?.bestLapMs ?: 60_000L
+        val metrics = phase1Engine.computeMetrics(best)
+        bindings.txtGamifiedConsistency.text = String.format(Locale.US, "Consistency Score: %.1f%%", metrics.consistencyScore)
+        bindings.txtGamifiedExecution.text = String.format(Locale.US, "Ideal Execution: %.1f%% (Ideal: %s)", metrics.idealExecutionScore, fmtMs(metrics.theoreticalIdealLapMs))
+        bindings.txtGamifiedConsistency.visibility = View.VISIBLE
+        bindings.txtGamifiedExecution.visibility = View.VISIBLE
+    } else {
+        bindings.txtGamifiedConsistency.visibility = View.GONE
+        bindings.txtGamifiedExecution.visibility = View.GONE
+    }
 }
 
 fun MainActivity.renderImuTelemetry(data: com.ejemplo.laptimer.engine.ImuTelemetryData) {
@@ -43,6 +55,16 @@ fun MainActivity.renderImuTelemetry(data: com.ejemplo.laptimer.engine.ImuTelemet
 
     val progressZ = ((data.gVertical.coerceIn(-1.0f, 1.0f) + 1.0f) * 50.0f).toInt().coerceIn(0, 100)
     bindings.progGVertical.progress = progressZ
+
+    if (settings.gamifiedMetricsEnabled) {
+        val best = race?.bestMs() ?: lastState?.bestLapMs ?: 60_000L
+        phase1Engine.recordJerk(data.gLongitudinal, data.gLateral, 0.02f)
+        val metrics = phase1Engine.computeMetrics(best)
+        bindings.txtGamifiedSmoothness.text = String.format(Locale.US, "Smoothness (Jerk): %.2f G/s", metrics.smoothnessScore)
+        bindings.txtGamifiedSmoothness.visibility = View.VISIBLE
+    } else {
+        bindings.txtGamifiedSmoothness.visibility = View.GONE
+    }
 }
 
 fun MainActivity.renderNet() {
