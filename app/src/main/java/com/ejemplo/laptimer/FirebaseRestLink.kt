@@ -62,8 +62,7 @@ class FirebaseRestLink(
 
         val telExec = Executors.newSingleThreadScheduledExecutor()
         telemetryExec = telExec
-        val telPeriodMs = (settings.intervalS * 1000L).coerceAtLeast(500L)
-        telExec.scheduleWithFixedDelay({ uploadTelemetryCycle() }, 0L, telPeriodMs, TimeUnit.MILLISECONDS)
+        telExec.scheduleWithFixedDelay({ uploadTelemetryCycle() }, 0L, 500L, TimeUnit.MILLISECONDS)
 
         val pExec = Executors.newSingleThreadScheduledExecutor()
         pitExec = pExec
