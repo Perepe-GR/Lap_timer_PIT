@@ -7,6 +7,7 @@ import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.ejemplo.laptimer.engine.*
 import com.ejemplo.laptimer.firebase.NetStatus
 import com.ejemplo.laptimer.firebase.SwapRequest
 import com.ejemplo.laptimer.logic.*
@@ -19,6 +20,8 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var bindings: MainActivityBindings
     internal lateinit var usbSerialManager: UsbSerialManager
     internal lateinit var gpsLocationManager: GpsLocationManager
+    internal lateinit var imuSensorManager: ImuSensorManager
+    @Volatile internal var lastImuData = com.ejemplo.laptimer.engine.ImuTelemetryData()
 
     internal lateinit var raceStore: RaceStore
     internal var race: RaceRecord? = null

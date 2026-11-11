@@ -9,6 +9,7 @@ import com.ejemplo.laptimer.GpsLocationManager
 import com.ejemplo.laptimer.MainActivity
 import com.ejemplo.laptimer.NmeaEvent
 import com.ejemplo.laptimer.UsbSerialManager
+import com.ejemplo.laptimer.engine.ImuSensorManager
 import com.ejemplo.laptimer.logic.*
 import com.ejemplo.laptimer.session.*
 
@@ -33,6 +34,11 @@ fun MainActivity.setupGpsManagers() {
         },
         { status -> bindings.txtGps.text = status }
     )
+    imuSensorManager = ImuSensorManager(this) { imu ->
+        lastImuData = imu
+        runOnUiThread { renderImuTelemetry(imu) }
+    }
+    imuSensorManager.start()
     ContextCompat.registerReceiver(
         this,
         usbSerialManager.permissionReceiver,

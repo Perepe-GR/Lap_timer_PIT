@@ -35,6 +35,16 @@ fun MainActivity.renderGps() {
     bindings.txtGpsDetailAlt.text = String.format(Locale.US, "Altitude: %.1f m%s", altitude, accDetail)
 }
 
+fun MainActivity.renderImuTelemetry(data: com.ejemplo.laptimer.engine.ImuTelemetryData) {
+    if (viewIndex != 4) return
+    bindings.gForceCircleView.updateGForce(data.gLateral, data.gLongitudinal)
+    bindings.txtGXYValue.text = String.format(Locale.US, "LAT: %+.2f G · LONG: %+.2f G", data.gLateral, data.gLongitudinal)
+    bindings.txtGZValue.text = String.format(Locale.US, "%+.2fG", data.gVertical)
+
+    val progressZ = ((data.gVertical.coerceIn(-1.0f, 1.0f) + 1.0f) * 50.0f).toInt().coerceIn(0, 100)
+    bindings.progGVertical.progress = progressZ
+}
+
 fun MainActivity.renderNet() {
     when {
         !settings.enabled -> { bindings.txtNet.text = "PIT: Disabled"; bindings.txtNet.setTextColor(Color.parseColor("#9AA3AE")) }

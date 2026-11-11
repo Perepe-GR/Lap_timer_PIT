@@ -583,6 +583,103 @@
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Vista 5: Diagrama G-G (Círculo de Fricción XY) y Barra Vertical Z -->
+            <LinearLayout
+                android:id="@+id/viewGForce"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#0B0D10"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <!-- Área principal: Círculo G-G de Acceleraciones XY -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.1"
+                        android:text="ACCELERATION G-G DIAGRAM (XY)"
+                        android:textColor="#9AA3AE"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <com.ejemplo.laptimer.GForceCircleView
+                        android:id="@+id/gForceCircleView"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:layout_margin="12dp" />
+
+                    <TextView
+                        android:id="@+id/txtGXYValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-condensed"
+                        android:text="LAT: 0.00 G · LONG: 0.00 G"
+                        android:textColor="#C6F432"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Barra Lateral Vertical Z (Impactos / Rebotes) -->
+                <LinearLayout
+                    android:layout_width="80dp"
+                    android:layout_height="match_parent"
+                    android:background="#15181C"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:elevation="4dp"
+                    android:layout_marginStart="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="VERTICAL Z"
+                        android:textColor="#9AA3AE"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtGZValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="sans-serif-condensed"
+                        android:text="0.00G"
+                        android:textColor="#38BDF8"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <ProgressBar
+                        android:id="@+id/progGVertical"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="28dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp"
+                        android:max="100"
+                        android:progress="50"
+                        android:progressDrawable="@drawable/prog_vertical_g" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="KERB / BOUNCE"
+                        android:textColor="#64748B"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
         </FrameLayout>
 
         <!-- Banda inferior: solo visible con un mensaje del pit o durante el reconocimiento -->
