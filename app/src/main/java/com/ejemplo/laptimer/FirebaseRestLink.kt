@@ -21,7 +21,8 @@ class FirebaseRestLink(
     private val onCommand: (SwapRequest?) -> Unit,
     private val onStatus: (NetStatus) -> Unit
 ) {
-    private var exec: ScheduledExecutorService? = null
+    private var telemetryExec: ScheduledExecutorService? = null
+    private var pitExec: ScheduledExecutorService? = null
     private val pendingLaps = ConcurrentLinkedQueue<String>()
     private var lastKey: String? = null
     private var lastCmdId: String? = null
@@ -58,15 +59,22 @@ class FirebaseRestLink(
         lastKey = null
         lastCmdId = null
         lastInstTime = 0L
-        val e = Executors.newSingleThreadScheduledExecutor()
-        exec = e
-        val period = settings.intervalS.toLong().coerceAtLeast(1L)
-        e.scheduleWithFixedDelay({ cycle() }, 0L, period, TimeUnit.SECONDS)
+
+        val telExec = Executors.newSingleThreadScheduledExecutor()
+        telemetryExec = telExec
+        val telPeriod = settings.intervalS.toLong().coerceAtLeast(1L)
+        telExec.scheduleWithFixedDelay({ uploadTelemetryCycle() }, 0L, telPeriod, TimeUnit.SECONDS)
+
+        val pExec = Executors.newSingleThreadScheduledExecutor()
+        pitExec = pExec
+        pExec.scheduleWithFixedDelay({ pitPollCycle() }, 0L, 5L, TimeUnit.SECONDS)
     }
 
     fun stop() {
-        exec?.shutdownNow()
-        exec = null
+        telemetryExec?.shutdownNow()
+        telemetryExec = null
+        pitExec?.shutdownNow()
+        pitExec = null
     }
 
     fun uploadRaceNow(id: String, json: String) {
@@ -84,7 +92,7 @@ class FirebaseRestLink(
         }.start()
     }
 
-    private fun cycle() {
+    private fun uploadTelemetryCycle() {
         try {
             val car = settings.carKey()
             if (settings.enabled) {
@@ -96,15 +104,23 @@ class FirebaseRestLink(
                     request("PUT", "laps/$car/$key", lap, "")
                     pendingLaps.poll()
                 }
+                onStatus(NetStatus.OK)
+            } else {
+                onStatus(NetStatus.OFF)
             }
+        } catch (_: Exception) {
+            onStatus(NetStatus.ERROR)
+        }
+    }
+
+    private fun pitPollCycle() {
+        try {
+            val car = settings.carKey()
             fetchMessages(car)
             fetchInstructions()
             fetchCommand(car)
             if (settings.enabled && !first && !purged) purgeInbox(car)
-            onStatus(NetStatus.OK)
-        } catch (_: Exception) {
-            onStatus(NetStatus.ERROR)
-        }
+        } catch (_: Exception) {}
     }
 
     private fun fetchMessages(car: String) {
@@ -206,25 +222,20 @@ class FirebaseRestLink(
 
     private fun fetchCommand(car: String) {
         val txt = request("GET", "cmd/$car", null, "").trim()
-        if (txt.isEmpty() || txt == "null") {
-            if (lastCmdId != null) {
-                lastCmdId = null
-                onCommand(null)
-            }
-            return
-        }
-        val o = JSONObject(txt)
-        val id = o.optString("id", "")
-        val conf = o.optBoolean("conf", false)
-        val key = if (conf) "$id!" else id
-        if (key != lastCmdId) {
-            lastCmdId = key
-            onCommand(
-                SwapRequest(
-                    id, o.optString("next", ""), o.optInt("laps", 0),
-                    o.optInt("min", 0), o.optInt("max", 0), o.optInt("pit", 0), conf
-                )
-            )
-        }
+        if (txt.isEmpty() || txt == "null") return
+        try {
+            val m = JSONObject(txt)
+            val id = m.optString("id", "")
+            if (id.isBlank() || id == lastCmdId) return
+            lastCmdId = id
+            val next = m.optString("next", m.optString("driver", "Driver 2"))
+            val laps = m.optInt("laps", 0)
+            val minMin = m.optInt("minMin", 0)
+            val maxMin = m.optInt("maxMin", 0)
+            val pitSec = m.optInt("pitSec", 0)
+            val confirmed = m.optBoolean("confirmed", false)
+            val req = SwapRequest(id, next, laps, minMin, maxMin, pitSec, confirmed)
+            onCommand(req)
+        } catch (_: Exception) {}
     }
 }
