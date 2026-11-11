@@ -33,6 +33,7 @@ class PitSettingsActivity : PageActivity() {
 
         val c3 = card("Data & Traces")
         val swTrace = check(c3, "Save full GPS trace in session files", settings.saveTrace)
+        val swGamified = check(c3, "Gamified Performance Metrics", settings.gamifiedMetricsEnabled)
 
         addFooter(
             button("CANCEL") { finish() },
@@ -47,11 +48,12 @@ class PitSettingsActivity : PageActivity() {
                 viewModel.onTeamNameChanged(inputTeam)
                 viewModel.onPinChanged(inputPin)
                 viewModel.onEnabledChanged(swEnabled.isChecked)
-                viewModel.onIntervalChanged(etInt.text.toString().toIntOrNull() ?: 10)
+                viewModel.onIntervalChanged(etInt.text.toString().toIntOrNull() ?: 1)
 
                 viewModel.validateAndSave(
                     onSuccess = {
                         settings.saveTrace = swTrace.isChecked
+                        settings.gamifiedMetricsEnabled = swGamified.isChecked
                         runOnUiThread {
                             Toast.makeText(this@PitSettingsActivity, "Settings saved successfully", Toast.LENGTH_SHORT).show()
                             finish()

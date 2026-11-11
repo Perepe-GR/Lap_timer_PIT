@@ -21,6 +21,7 @@ class NetSettings(context: Context) {
     var intervalS: Int get() = p.getInt("interval", 1); set(v) = store.putI("interval", v.coerceAtLeast(1))
     var panelUrl: String get() = p.getString("panel", "https://user.github.io/pit-panel/") ?: "https://user.github.io/pit-panel/"; set(v) = store.putS("panel", v.trim())
     var saveTrace: Boolean get() = p.getBoolean("trace", true); set(v) = store.putB("trace", v)
+    var gamifiedMetricsEnabled: Boolean get() = p.getBoolean("gamifiedMetrics", true); set(v) = store.putB("gamifiedMetrics", v)
 
     // ---- Identity ----
     var carName: String get() = p.getString("carName", "Car 1") ?: "Car 1"; set(v) = store.putS("carName", v.trim().ifEmpty { "Car 1" })
