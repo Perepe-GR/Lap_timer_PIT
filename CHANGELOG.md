@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.0] - 2026-11-09
+
+### Added
+- Phase 1 Gamified Performance Metrics Engine (`Phase1PerformanceEngine.kt`):
+  - Consistency Score (%), Smoothness Score (Jerk G/s), Ideal Execution Score (%), and Braking Point Consistency ($\sigma_{S_{brake}}$).
+- 5th Display Layout (`viewGForce`):
+  - Motorsport G-G Friction Circle Diagram (Lateral vs Longitudinal acceleration) and Vertical Z acceleration side bar with kerb/bounce progress bar.
+  - Updated swipe navigation cycler (`MainNavigator.kt`) to support 5 display layouts (`% 5`).
+- Settings Toggle for Gamified Metrics:
+  - Added preference toggle in `SessionSettingsActivity` and `PitSettingsActivity` to enable/disable performance calculations at runtime to conserve CPU/battery.
+- Pit Wall Web Dashboard Enhancements:
+  - Interactive collapsible Session Lap History drawer on clicking any car in the live timing table (expanding up to 50 lines before scrolling).
+  - Separate login tabs for "Connect to Team" and "Create New Team".
+  - Persistent expanded history state across live telemetry refreshes (eliminating the 500ms flicker).
+- High-Performance Dual-Background Network Architecture:
+  - Decoupled 500ms high-frequency telemetry push executor from 1-second pit message/instruction pulling executor in `FirebaseRestLink`.
+
+### Changed
+- Upgraded major version to 2.6.0 (`versionCode = 170`, `versionName = "2.6.0"`, build number reset to `0`) across `build.gradle.kts`, `version.properties`, `Races.kt`, `HomeUiBuilder.kt`, and `MainDemoController.kt`.
+
 ## [2.5.0] - 2026-11-09
 
 ### Added

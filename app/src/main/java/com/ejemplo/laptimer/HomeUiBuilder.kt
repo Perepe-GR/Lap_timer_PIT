@@ -62,9 +62,9 @@ fun HomeActivity.buildUi(): View {
     head.addView(logo, LinearLayout.LayoutParams(dp(56), dp(56)))
     val title = TextView(this)
     val versionName = try {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: "2.5.0"
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "2.6.0"
     } catch (_: Exception) {
-        "2.5.0"
+        "2.6.0"
     }
     val displayVersion = if (versionName.startsWith("v", true)) versionName else "v$versionName"
     title.text = "Lap Timer $displayVersion"
