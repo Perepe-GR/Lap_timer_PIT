@@ -1,22 +1,22 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="96dp"
     android:height="40dp"
-    android:viewportWidth="200"
-    android:viewportHeight="80">
-  <!-- Left Black Parallelogram Background (Slanted) -->
+    android:viewportWidth="160"
+    android:viewportHeight="64">
+  <!-- Left Black Parallelogram -->
   <path
       android:fillColor="#111318"
-      android:pathData="M15,0 L115,0 L95,80 L0,80 Z"/>
-  <!-- Right Red Parallelogram Background (Slanted) -->
+      android:pathData="M12,0 L92,0 L80,64 L0,64 Z"/>
+  <!-- Right Red Parallelogram -->
   <path
       android:fillColor="#EB0A1E"
-      android:pathData="M115,0 L185,0 L165,80 L95,80 Z"/>
-  <!-- White Slanted G Letter -->
+      android:pathData="M92,0 L148,0 L136,64 L80,64 Z"/>
+  <!-- White Bold Italic G -->
   <path
       android:fillColor="#FFFFFF"
-      android:pathData="M35,20 L53,20 L49,32 L40,32 L38,38 L48,38 L45,50 L27,50 L35,20 Z"/>
-  <!-- White Slanted R Letter -->
+      android:pathData="M26,14 L50,14 L45,26 L36,26 L34,32 L44,32 L40,50 L22,50 L26,14 Z"/>
+  <!-- White Bold Italic R -->
   <path
       android:fillColor="#FFFFFF"
-      android:pathData="M115,20 L138,20 C146,20 151,24 151,31 C151,36 148,40 143,42 L153,50 L137,50 L129,42 L127,42 L125,50 L111,50 L115,20 Z M125,28 L123,34 L133,34 C136,34 138,32 138,31 C138,29 136,28 133,28 L125,28 Z"/>
+      android:pathData="M96,14 L122,14 C131,14 137,18 137,26 C137,31 134,35 129,38 L138,50 L121,50 L113,40 L111,40 L109,50 L93,50 L96,14 Z M109,24 L107,30 L118,30 C121,30 123,28 123,27 C123,25 121,24 118,24 L109,24 Z"/>
 </vector>

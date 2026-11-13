@@ -52,7 +52,7 @@ fun HomeActivity.buildUi(): View {
 
     val left = LinearLayout(this)
     left.orientation = LinearLayout.VERTICAL
-    left.background = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_carbon_fiber)
+    left.background = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_carbon_fiber_rounded)
     left.setPadding(dp(20), dp(16), dp(20), dp(16))
 
     val head = LinearLayout(this)
