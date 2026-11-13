@@ -142,8 +142,8 @@ class ImuSensorManager(
             linZ = rawZ - GRAVITY_EARTH
         }
 
-        val rawGLong = (linY / GRAVITY_EARTH)
-        val rawGLat = (linX / GRAVITY_EARTH)
+        val rawGLong = (linX / GRAVITY_EARTH)
+        val rawGLat = (linY / GRAVITY_EARTH)
         val rawGVert = (linZ / GRAVITY_EARTH)
 
         val fLong = filterLongitudinal.filter(rawGLong, deltaSec) - tareLongitudinalG
