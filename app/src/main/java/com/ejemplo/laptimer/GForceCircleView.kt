@@ -5,14 +5,19 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.Path
 import android.util.AttributeSet
 import android.view.View
+import java.util.Arrays
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
  * Custom View for rendering motorsport Friction Circle / G-G Diagram (Lateral vs Longitudinal Acceleration)
- * with a dynamic session peak G-force dotted envelope ring.
+ * with a directional session peak G-force dotted polygon envelope.
  */
 class GForceCircleView @JvmOverloads constructor(
     context: Context,
@@ -61,23 +66,29 @@ class GForceCircleView @JvmOverloads constructor(
     @Volatile
     var gLong = 0f
 
-    @Volatile
-    var peakG = 0f
-
     var maxG = 1.5f
+
+    private val numSectors = 36
+    private val sectorMaxGs = FloatArray(numSectors) { 0f }
 
     fun updateGForce(latG: Float, longG: Float) {
         gLat = latG
         gLong = longG
-        val currentG = sqrt(latG * latG + longG * longG)
-        if (currentG > peakG) {
-            peakG = currentG.coerceAtMost(maxG * 1.5f)
+
+        val r = sqrt(latG * latG + longG * longG)
+        if (r > 0.05f && r < maxG * 2f) {
+            val angle = atan2(longG, latG)
+            var sectorIdx = ((angle + Math.PI.toFloat()) / (2f * Math.PI.toFloat()) * numSectors).toInt()
+            sectorIdx = sectorIdx.coerceIn(0, numSectors - 1)
+            if (r > sectorMaxGs[sectorIdx]) {
+                sectorMaxGs[sectorIdx] = r.coerceAtMost(maxG * 1.5f)
+            }
         }
         postInvalidateOnAnimation()
     }
 
     fun resetPeak() {
-        peakG = 0f
+        Arrays.fill(sectorMaxGs, 0f)
         postInvalidateOnAnimation()
     }
 
@@ -96,10 +107,29 @@ class GForceCircleView @JvmOverloads constructor(
         canvas.drawCircle(cx, cy, ring2, ringPaint)
         canvas.drawCircle(cx, cy, ring3, ringPaint)
 
-        // Draw Peak Dotted Ring (Session Maximum Envelope)
-        if (peakG > 0f) {
-            val peakRadius = maxRadius * (peakG / maxG)
-            canvas.drawCircle(cx, cy, peakRadius, peakRingPaint)
+        // Draw Directional Peak Dotted Polygon Envelope
+        val path = Path()
+        var hasPoints = false
+        for (i in 0 until numSectors) {
+            val maxR = sectorMaxGs[i]
+            if (maxR > 0f) {
+                val theta = (i.toFloat() / numSectors) * 2f * Math.PI.toFloat() - Math.PI.toFloat()
+                val latDir = cos(theta)
+                val longDir = sin(theta)
+                val px = cx + (latDir * maxR / maxG) * maxRadius
+                val py = cy - (longDir * maxR / maxG) * maxRadius
+
+                if (!hasPoints) {
+                    path.moveTo(px, py)
+                    hasPoints = true
+                } else {
+                    path.lineTo(px, py)
+                }
+            }
+        }
+        if (hasPoints) {
+            path.close()
+            canvas.drawPath(path, peakRingPaint)
         }
 
         // Draw Crosshair Axes
