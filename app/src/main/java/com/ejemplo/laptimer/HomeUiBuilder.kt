@@ -1,6 +1,7 @@
 package com.ejemplo.laptimer
 
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -71,9 +72,20 @@ fun HomeActivity.buildUi(): View {
     title.textSize = 24f
     title.typeface = Typeface.DEFAULT_BOLD
     title.setTextColor(colText)
-    title.setPadding(dp(12), 0, 0, 0)
-    head.addView(title)
+    head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(12), 0, 0, 0) })
+
+    val badge = ImageView(this)
+    badge.setImageResource(R.drawable.ic_gr_badge)
+    head.addView(badge, LinearLayout.LayoutParams(dp(56), dp(28)))
     left.addView(head)
+
+    val subTitle = TextView(this)
+    subTitle.text = "TOYOTA GAZOO RACING · GR86 EDITION"
+    subTitle.textSize = 11f
+    subTitle.typeface = Typeface.DEFAULT_BOLD
+    subTitle.setTextColor(Color.parseColor("#E0041B"))
+    subTitle.setPadding(dp(2), dp(4), 0, dp(12))
+    left.addView(subTitle)
 
     txtCircuit = statusLine()
     txtAntenna = statusLine()
