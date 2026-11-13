@@ -1,12 +1,22 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="24dp"
-    android:viewportWidth="96"
-    android:viewportHeight="48">
+    android:width="72dp"
+    android:height="32dp"
+    android:viewportWidth="144"
+    android:viewportHeight="64">
+  <!-- GR Red Accent Box -->
   <path
-      android:fillColor="#EB0A1E"
-      android:pathData="M0,0h96v48h-96z"/>
+      android:fillColor="#E0041B"
+      android:pathData="M0,0h56v64h-56z"/>
+  <!-- G Letter White -->
   <path
       android:fillColor="#FFFFFF"
-      android:pathData="M12,12h12v6h-6v6h6v6h-12z M32,12h18v6h-12v3h10v6h-10v3h12v6h-18z M56,12h18v6h-12v3h10v6h-10v3h12v6h-18z"/>
+      android:pathData="M14,16h16v8h-8v8h8v8h-16z"/>
+  <!-- R Letter White -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M38,16h16v10h-8v6h8v8h-8v-6h-8v6h-8z"/>
+  <!-- 86 Black Text on Right -->
+  <path
+      android:fillColor="#F2F4F7"
+      android:pathData="M64,16h10v32h-10z M78,16h20v8h-12v4h10v8h-10v4h12v8h-20z M102,16h8l10,32h-9l-2,-8h-9l-2,8h-9l10,-32z M107,32h4l-2,-8z"/>
 </vector>
