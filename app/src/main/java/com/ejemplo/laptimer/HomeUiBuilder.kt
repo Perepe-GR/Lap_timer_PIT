@@ -1,7 +1,6 @@
 package com.ejemplo.laptimer
 
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -44,19 +43,6 @@ fun HomeActivity.statusLine(): TextView {
     return t
 }
 
-fun HomeActivity.carbonFiberBg(): android.graphics.drawable.Drawable {
-    val bitmap = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.bg_carbon_fiber)
-    val bitmapDrawable = android.graphics.drawable.BitmapDrawable(resources, bitmap).apply {
-        tileModeX = android.graphics.Shader.TileMode.REPEAT
-        tileModeY = android.graphics.Shader.TileMode.REPEAT
-    }
-    val rounded = android.graphics.drawable.GradientDrawable().apply {
-        cornerRadius = dp(16).toFloat()
-        setColor(Color.parseColor("#0A0C10"))
-    }
-    return android.graphics.drawable.LayerDrawable(arrayOf(rounded, bitmapDrawable))
-}
-
 fun HomeActivity.buildUi(): View {
     val root = LinearLayout(this)
     root.orientation = LinearLayout.HORIZONTAL
@@ -65,7 +51,7 @@ fun HomeActivity.buildUi(): View {
 
     val left = LinearLayout(this)
     left.orientation = LinearLayout.VERTICAL
-    left.background = carbonFiberBg()
+    left.background = roundBg(colCard, 16)
     left.setPadding(dp(20), dp(16), dp(20), dp(16))
 
     val head = LinearLayout(this)
@@ -85,26 +71,9 @@ fun HomeActivity.buildUi(): View {
     title.textSize = 24f
     title.typeface = Typeface.DEFAULT_BOLD
     title.setTextColor(colText)
-    head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(12), 0, 0, 0) })
-
-    val badge = ImageView(this)
-    badge.setImageResource(R.drawable.ic_gr_badge)
-    head.addView(badge, LinearLayout.LayoutParams(dp(56), dp(28)))
+    title.setPadding(dp(12), 0, 0, 0)
+    head.addView(title)
     left.addView(head)
-
-    val subTitle = TextView(this)
-    subTitle.text = "TOYOTA GAZOO RACING · GR86 EDITION"
-    subTitle.textSize = 11f
-    subTitle.typeface = Typeface.DEFAULT_BOLD
-    subTitle.setTextColor(Color.parseColor("#E0041B"))
-    subTitle.setPadding(dp(2), dp(4), 0, dp(8))
-    left.addView(subTitle)
-
-    val carImg = ImageView(this)
-    carImg.setImageResource(R.drawable.img_gr86_car)
-    carImg.adjustViewBounds = true
-    carImg.scaleType = ImageView.ScaleType.FIT_CENTER
-    left.addView(carImg, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(110)).apply { setMargins(0, 0, 0, dp(12)) })
 
     txtCircuit = statusLine()
     txtAntenna = statusLine()

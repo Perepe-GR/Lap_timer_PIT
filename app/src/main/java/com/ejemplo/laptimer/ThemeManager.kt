@@ -47,7 +47,7 @@ object ThemeManager {
 
     val THEMES = listOf(THEME_CLASSIC, THEME_GR86, THEME_RACING_BLUE)
 
-    private val _currentTheme = MutableStateFlow(THEME_GR86)
+    private val _currentTheme = MutableStateFlow(THEME_CLASSIC)
     val currentTheme: StateFlow<AppTheme> = _currentTheme.asStateFlow()
 
     fun init(context: Context) {
@@ -56,8 +56,8 @@ object ThemeManager {
 
     fun getTheme(context: Context): AppTheme {
         val sp = context.getSharedPreferences("laptimer_prefs", Context.MODE_PRIVATE)
-        val id = sp.getString("app_theme_id", "gr86")
-        return THEMES.firstOrNull { it.id == id } ?: THEME_GR86
+        val id = sp.getString("app_theme_id", "classic")
+        return THEMES.firstOrNull { it.id == id } ?: THEME_CLASSIC
     }
 
     fun setTheme(context: Context, themeId: String) {
