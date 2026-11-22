@@ -11,7 +11,7 @@ class LapEngine(private val circuit: Circuit, initial: Persisted? = null) {
 
     companion object {
         const val MIN_LAP_MS = 10_000L
-        const val MAX_GAP_MS = 1_000L
+        const val MAX_GAP_MS = 3_000L
     }
 
     private val detector = LapDetector(circuit)
