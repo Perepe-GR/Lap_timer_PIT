@@ -14,6 +14,7 @@ class SessionRecorder(private val store: SessionStore, private val saveTrace: ()
     private var t0 = 0L
     private var lastLat = Double.NaN
     private var lastLon = Double.NaN
+    private var lastGpsT = 0L
     private var stoppedSince = -1L
 
     /** Devuelve true si con esta muestra ha empezado una sesión nueva. */
@@ -34,14 +35,27 @@ class SessionRecorder(private val store: SessionStore, private val saveTrace: ()
             t0 = gpsT
             lastLat = Double.NaN
             lastLon = Double.NaN
+            lastGpsT = 0L
             stoppedSince = -1L
             started = true
         }
         val r = rec ?: return started
         val off = gpsT - t0
-        if (!lastLat.isNaN()) r.distanceM += distanceM(lastLat, lastLon, lat, lon)
+
+        if (!lastLat.isNaN() && lastGpsT > 0L) {
+            val dist = distanceM(lastLat, lastLon, lat, lon)
+            val dtSec = (gpsT - lastGpsT) / 1000.0
+            // Reject single-sample GPS teleportation spikes (>35m jump in <400ms)
+            if (dist > 35.0 && dtSec in 0.001..0.4) {
+                return false
+            }
+            r.distanceM += dist
+        }
+
         lastLat = lat
         lastLon = lon
+        lastGpsT = gpsT
+
         if (kmh > r.maxSpeedKmh) r.maxSpeedKmh = kmh
         r.durationMs = off
         runCatching { writer?.add(off, lat, lon, kmh.toFloat()) }
