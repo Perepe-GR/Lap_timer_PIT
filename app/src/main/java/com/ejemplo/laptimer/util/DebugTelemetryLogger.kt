@@ -10,33 +10,42 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Black-box diagnostic telemetry logger recording high-frequency GPS, NMEA, and IMU data to CSV.
+ * Black-box diagnostic telemetry logger recording high-frequency GPS, NMEA, IMU, USB errors,
+ * and lap/sector event milestones to structured CSV files.
  */
 class DebugTelemetryLogger(private val context: Context) {
     companion object {
         private const val TAG = "DebugTelemetryLogger"
     }
 
-    private var fileWriter: FileWriter? = null
+    private var telemetryWriter: FileWriter? = null
+    private var eventWriter: FileWriter? = null
     private var isRecording = false
-    private var logFileName = ""
+    private var sessionTag = ""
 
     @Synchronized
     fun startSession() {
         if (isRecording) return
         try {
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            logFileName = "debug_telemetry_$timestamp.csv"
+            sessionTag = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val dir = File(context.getExternalFilesDir(null), "debug_logs").apply { mkdirs() }
-            val file = File(dir, logFileName)
-            fileWriter = FileWriter(file, false).apply {
+
+            val telFile = File(dir, "debug_telemetry_$sessionTag.csv")
+            telemetryWriter = FileWriter(telFile, false).apply {
                 append("ElapsedRealtimeMs,TimestampUtc,Lat,Lon,Kmh,Sats,Hdop,AccuracyMeters,GLong,GLat,GVert,Source\n")
                 flush()
             }
+
+            val eventFile = File(dir, "debug_events_$sessionTag.csv")
+            eventWriter = FileWriter(eventFile, false).apply {
+                append("ElapsedRealtimeMs,TimestampUtc,Category,Message\n")
+                flush()
+            }
+
             isRecording = true
-            Log.i(TAG, "Started debug telemetry log: ${file.absolutePath}")
+            Log.i(TAG, "Started black-box debug session: $sessionTag")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start debug log: ${e.message}", e)
+            Log.e(TAG, "Failed to start debug session: ${e.message}", e)
         }
     }
 
@@ -53,33 +62,48 @@ class DebugTelemetryLogger(private val context: Context) {
         gVert: Float,
         source: String
     ) {
-        if (!isRecording || fileWriter == null) return
+        if (!isRecording || telemetryWriter == null) return
         try {
             val elapsed = SystemClock.elapsedRealtime()
             val utc = System.currentTimeMillis()
-            fileWriter?.apply {
+            telemetryWriter?.apply {
                 append("$elapsed,$utc,$lat,$lon,$kmh,$sats,$hdop,$accuracy,$gLong,$gLat,$gVert,$source\n")
                 flush()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error writing debug row: ${e.message}")
+            Log.e(TAG, "Error writing debug telemetry row: ${e.message}")
         }
     }
 
     @Synchronized
-    fun stopSession(): String? {
-        if (!isRecording) return null
+    fun logEvent(category: String, message: String) {
+        if (!isRecording || eventWriter == null) return
         try {
-            fileWriter?.close()
-            fileWriter = null
-            isRecording = false
-            val dir = File(context.getExternalFilesDir(null), "debug_logs")
-            val file = File(dir, logFileName)
-            Log.i(TAG, "Stopped debug telemetry log: ${file.absolutePath}")
-            return file.absolutePath
+            val elapsed = SystemClock.elapsedRealtime()
+            val utc = System.currentTimeMillis()
+            val cleanMsg = message.replace(",", ";").replace("\n", " ")
+            eventWriter?.apply {
+                append("$elapsed,$utc,$category,$cleanMsg\n")
+                flush()
+            }
+            Log.w(TAG, "[$category] $message")
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping debug log: ${e.message}")
-            return null
+            Log.e(TAG, "Error writing debug event: ${e.message}")
+        }
+    }
+
+    @Synchronized
+    fun stopSession() {
+        if (!isRecording) return
+        try {
+            telemetryWriter?.close()
+            eventWriter?.close()
+            telemetryWriter = null
+            eventWriter = null
+            isRecording = false
+            Log.i(TAG, "Stopped black-box debug session: $sessionTag")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping debug session: ${e.message}")
         }
     }
 }
