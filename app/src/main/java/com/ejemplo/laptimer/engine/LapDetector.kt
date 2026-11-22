@@ -64,13 +64,30 @@ class LapDetector(private val circuit: Circuit) {
     }
 
     fun checkGateCrossing(running: Boolean, expected: Int, x1: Double, y1: Double, x2: Double, y2: Double): Pair<Int, Double>? {
-        val gate = if (running) sequence[expected] else finishGate
-        val f = crossing(gate, x1, y1, x2, y2)
-        if (f != null) return Pair(if (running) expected else -1, f)
-        if (running && expected < n - 1) {
+        if (!running) {
+            val f = crossing(finishGate, x1, y1, x2, y2)
+            if (f != null) return Pair(-1, f)
+            return null
+        }
+
+        if (expected in 0 until n) {
+            val f = crossing(sequence[expected], x1, y1, x2, y2)
+            if (f != null) {
+                val targetIdx = if (expected == n - 1) -1 else expected
+                return Pair(targetIdx, f)
+            }
+        }
+
+        for (i in (expected + 1) until (n - 1)) {
+            val f = crossing(sequence[i], x1, y1, x2, y2)
+            if (f != null) return Pair(i, f)
+        }
+
+        if (expected < n - 1) {
             val f2 = crossing(finishGate, x1, y1, x2, y2)
             if (f2 != null) return Pair(-1, f2)
         }
+
         return null
     }
 }

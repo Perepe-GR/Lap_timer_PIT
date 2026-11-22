@@ -151,7 +151,7 @@ class LapEngine(private val circuit: Circuit, initial: Persisted? = null) {
             val tc = t1 + (t2 - t1) * f
             val xc = x1 + (x2 - x1) * f
             val yc = y1 + (y2 - y1) * f
-            if (gateIdx >= 0) onGate(tc, xc, yc) else startLap(tc, xc, yc)
+            if (gateIdx >= 0) onGate(tc, xc, yc, gateIdx) else startLap(tc, xc, yc)
         }
     }
 
@@ -186,11 +186,23 @@ class LapEngine(private val circuit: Circuit, initial: Persisted? = null) {
         deltaCalculator.reset()
     }
 
-    private fun onGate(tc: Double, xc: Double, yc: Double) {
+    private fun onGate(tc: Double, xc: Double, yc: Double, hitIdx: Int = expected) {
+        if (hitIdx > expected) {
+            currentLapHasGapWarning = true
+            for (skipped in expected until hitIdx) {
+                currentSplits.add(0L)
+                if (skipped < marks.size) {
+                    marks[skipped] = SectorMark(0L, MarkKind.NEUTRAL)
+                }
+            }
+            expected = hitIdx
+        }
         val idx = expected
         val split = Math.round(tc - splitStart)
         currentSplits.add(split)
-        marks[idx] = SectorMark(split, sectorCalculator.kindFor(idx, split))
+        if (idx < marks.size) {
+            marks[idx] = SectorMark(split, sectorCalculator.kindFor(idx, split))
+        }
         splitStart = tc; expected++; onBoundary?.invoke()
         if (expected < n) return
 
