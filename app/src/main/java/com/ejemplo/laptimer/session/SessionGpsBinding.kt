@@ -31,6 +31,19 @@ fun MainActivity.onPosition(ev: NmeaEvent.Position, render: Boolean) {
 
     if (demoActive) simNowMs = ev.timeMs
 
+    debugLogger.logRow(
+        lat = ev.lat,
+        lon = ev.lon,
+        kmh = ev.speedKmh,
+        sats = sats,
+        hdop = hdop,
+        accuracy = lastAccuracyMeters ?: 0f,
+        gLong = lastImuData.gLongitudinal,
+        gLat = lastImuData.gLateral,
+        gVert = lastImuData.gVertical,
+        source = if (demoActive) "DEMO" else settings.gpsSource
+    )
+
     val sNow = stint
     circuit?.let { if (it.hasPaddock && reconName == null) updatePaddock(it.inPaddock(ev.lat, ev.lon)) }
     if (race == null && !raceEnded && ev.speedKmh > 5.0) ensureRace()

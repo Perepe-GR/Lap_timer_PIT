@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var imuSensorManager: ImuSensorManager
     @Volatile internal var lastImuData = com.ejemplo.laptimer.engine.ImuTelemetryData()
     internal val phase1Engine = com.ejemplo.laptimer.engine.Phase1PerformanceEngine()
+    internal val debugLogger = com.ejemplo.laptimer.util.DebugTelemetryLogger(this)
 
     internal lateinit var raceStore: RaceStore
     internal var race: RaceRecord? = null
@@ -136,6 +137,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        debugLogger.startSession()
         setupWindowAndDisplay()
         bindings = MainActivityBindings(this)
         setupGpsManagers()
@@ -191,6 +193,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (isFinishing) endRace("closed")
         demo?.stop(); recorder?.end()
+        debugLogger.stopSession()
         unregisterReceiver(usbSerialManager.permissionReceiver)
         usbSerialManager.shutdown()
         super.onDestroy()
