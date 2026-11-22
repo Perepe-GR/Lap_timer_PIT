@@ -7,6 +7,8 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver
 import com.hoho.android.usbserial.driver.FtdiSerialDriver
@@ -36,6 +38,35 @@ class UsbSerialManager(
     private var port: UsbSerialPort? = null
     private var ioManager: SerialInputOutputManager? = null
 
+    private val watchdogHandler = Handler(Looper.getMainLooper())
+    private var lastDataReceivedMs = System.currentTimeMillis()
+    private var watchdogStarted = false
+
+    private val watchdog = object : Runnable {
+        override fun run() {
+            if (port != null) {
+                val idleMs = System.currentTimeMillis() - lastDataReceivedMs
+                if (idleMs > 4000L) {
+                    Log.w(TAG, "Watchdog: No NMEA data received for ${idleMs}ms. Auto-recovering USB port...")
+                    onStatus("Reconnecting USB GPS...")
+                    try {
+                        openPort()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Watchdog auto-reconnect failed: ${e.message}")
+                    }
+                    lastDataReceivedMs = System.currentTimeMillis()
+                }
+            } else {
+                val driver = findDriver()
+                if (driver != null) {
+                    Log.i(TAG, "Watchdog: Found disconnected USB driver. Auto-connecting...")
+                    openPort()
+                }
+            }
+            watchdogHandler.postDelayed(this, 3000L)
+        }
+    }
+
     val permissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action
@@ -45,22 +76,18 @@ class UsbSerialManager(
                 @Suppress("DEPRECATION")
                 intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
             }
-            Log.i(TAG, "BroadcastReceiver onReceive: action=$action, device=${device?.deviceName} (VID:${device?.vendorId}, PID:${device?.productId})")
+            Log.i(TAG, "BroadcastReceiver onReceive: action=$action, device=${device?.deviceName}")
 
             if (action == ACTION_USB_PERMISSION) {
                 val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                 if (granted) {
-                    Log.i(TAG, "USB permission GRANTED by user for device: ${device?.deviceName}")
                     openPort()
                 } else {
-                    Log.e(TAG, "USB permission DENIED by user for device: ${device?.deviceName}")
                     onStatus("USB permission denied")
                 }
             } else if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
-                Log.i(TAG, "USB device attached")
                 openPort()
             } else if (action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
-                Log.i(TAG, "USB device detached")
                 onStatus("USB Disconnected")
                 disconnect()
             }
@@ -70,42 +97,27 @@ class UsbSerialManager(
     fun findDriver(): UsbSerialDriver? {
         val deviceList = usbManager.deviceList
         if (deviceList.isEmpty()) {
-            Log.w(TAG, "findDriver: No USB devices connected to system bus.")
-        } else {
-            for ((name, dev) in deviceList) {
-                Log.i(TAG, "Connected USB Bus Device: name=$name, vendorId=${dev.vendorId} (0x${Integer.toHexString(dev.vendorId)}), productId=${dev.productId} (0x${Integer.toHexString(dev.productId)})")
-            }
+            Log.w(TAG, "findDriver: No USB devices connected.")
         }
-
         val defaultDriver = UsbSerialProber.getDefaultProber().findAllDrivers(usbManager).firstOrNull()
-        if (defaultDriver != null) {
-            Log.i(TAG, "findDriver: Found driver via default prober -> ${defaultDriver.javaClass.simpleName} (Device: ${defaultDriver.device.deviceName})")
-            return defaultDriver
-        }
+        if (defaultDriver != null) return defaultDriver
 
-        // Custom Prober for u-blox (Vendor ID: 0x1546 / 5446, Product ID: 0x01a9 / 425)
         val customTable = ProbeTable().apply {
             addProduct(0x1546, 0x01a9, CdcAcmSerialDriver::class.java)
             addProduct(0x1546, 0x01a9, FtdiSerialDriver::class.java)
             addProduct(0x1546, 0x01a9, ProlificSerialDriver::class.java)
         }
-        val customDriver = UsbSerialProber(customTable).findAllDrivers(usbManager).firstOrNull()
-        if (customDriver != null) {
-            Log.i(TAG, "findDriver: Found driver via custom u-blox prober (0x1546:0x01a9) -> ${customDriver.javaClass.simpleName}")
-        } else {
-            Log.w(TAG, "findDriver: No driver found via default or custom u-blox prober for 0x1546:0x01a9")
-        }
-        return customDriver
+        return UsbSerialProber(customTable).findAllDrivers(usbManager).firstOrNull()
     }
 
     fun connect(): Boolean {
-        if (port != null) {
-            Log.i(TAG, "connect: Port already connected.")
-            return true
+        if (!watchdogStarted) {
+            watchdogStarted = true
+            watchdogHandler.postDelayed(watchdog, 3000L)
         }
+        if (port != null) return true
         val driver = findDriver()
         if (driver == null) {
-            Log.w(TAG, "connect: No driver found. Please check OTG cable and u-blox connection.")
             onStatus("Connect antenna via USB")
             return false
         }
@@ -114,18 +126,17 @@ class UsbSerialManager(
     }
 
     fun openPort() {
+        if (!watchdogStarted) {
+            watchdogStarted = true
+            watchdogHandler.postDelayed(watchdog, 3000L)
+        }
         val driver = findDriver()
         if (driver == null) {
-            Log.w(TAG, "openPort: Antenna not detected (driver is null)")
             onStatus("Antenna not detected")
             return
         }
         val device = driver.device
-        val hasPerm = usbManager.hasPermission(device)
-        Log.i(TAG, "openPort: Device found -> ${device.deviceName}, Vendor: ${device.vendorId}, Product: ${device.productId}, HasPermission: $hasPerm")
-
-        if (!hasPerm) {
-            Log.i(TAG, "openPort: Requesting USB permission for device...")
+        if (!usbManager.hasPermission(device)) {
             val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             } else {
@@ -139,14 +150,10 @@ class UsbSerialManager(
 
         val connection = usbManager.openDevice(device)
         if (connection == null) {
-            Log.e(TAG, "openPort: FAILED to open USB device connection (usbManager.openDevice returned null).")
             onStatus("Could not open USB device")
             return
         }
-        Log.i(TAG, "openPort: UsbDeviceConnection opened successfully (serialNumber: ${connection.serial})")
-
         if (driver.ports.isEmpty()) {
-            Log.e(TAG, "openPort: Driver has no ports available!")
             onStatus("No serial ports on device")
             connection.close()
             return
@@ -156,24 +163,21 @@ class UsbSerialManager(
         try {
             p.open(connection)
             p.setParameters(BAUD_RATE, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
-            Log.i(TAG, "openPort: Port opened successfully and parameters set to $BAUD_RATE baud, 8 data bits, 1 stop bit, no parity (Endpoint: 0x80 IN)")
         } catch (e: Exception) {
-            Log.e(TAG, "openPort: Exception during p.open() or setParameters(): ${e.message}", e)
             onStatus("USB error: ${e.message}")
             runCatching { p.close() }
             return
         }
 
         port = p
+        lastDataReceivedMs = System.currentTimeMillis()
         ioManager = SerialInputOutputManager(p, this).also {
             ioExecutor.submit(it)
-            Log.i(TAG, "openPort: SerialInputOutputManager started on background thread.")
         }
         onStatus("Waiting for GPS...")
     }
 
     fun disconnect() {
-        Log.i(TAG, "disconnect: Disconnecting USB serial port.")
         ioManager?.stop()
         ioManager = null
         runCatching { port?.close() }
@@ -181,7 +185,8 @@ class UsbSerialManager(
     }
 
     fun shutdown() {
-        Log.i(TAG, "shutdown: Shutting down UsbSerialManager.")
+        watchdogHandler.removeCallbacks(watchdog)
+        watchdogStarted = false
         disconnect()
         ioExecutor.shutdownNow()
     }
@@ -190,18 +195,13 @@ class UsbSerialManager(
         get() = port != null
 
     override fun onNewData(data: ByteArray) {
-        val nmeaSnippet = try {
-            String(data, Charsets.US_ASCII).take(120).replace("\r", "\\r").replace("\n", "\\n")
-        } catch (_: Exception) {
-            ""
-        }
-        Log.d(TAG, "onNewData: Received ${data.size} raw bytes | NMEA preview: $nmeaSnippet")
+        lastDataReceivedMs = System.currentTimeMillis()
         onData(data)
     }
 
     override fun onRunError(e: Exception) {
         Log.e(TAG, "onRunError: SerialInputOutputManager run error: ${e.message}", e)
-        onStatus("USB Disconnected")
+        onStatus("USB Reconnecting...")
         disconnect()
     }
 }

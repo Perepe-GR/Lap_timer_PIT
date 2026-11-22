@@ -119,6 +119,12 @@ class MainActivity : AppCompatActivity() {
         override fun run() {
             updateStintStrip(); updateAlerts(); pruneMsgs()
             if (inPit && clockNow() - pitStartAt > 900_000L) exitPit()
+            if (inPaddock && lastKmh > 8.0) {
+                paddockDismissed = true
+                inPaddock = false
+                bindings.pitOverlay.removeCallbacks(pitBlink)
+                bindings.pitOverlay.visibility = View.GONE
+            }
             ensureProgrammedSwap(); maybeRequestDemoPit(); checkRaceTime(); updateLapHeader()
             val fin = (isFinalLap() || isRaceFinalLap()) && !inPit
             if (fin != lastFinalShown) { lastFinalShown = fin; renderBottom() }

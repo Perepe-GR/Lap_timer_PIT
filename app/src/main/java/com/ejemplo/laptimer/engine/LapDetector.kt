@@ -14,15 +14,16 @@ class LapDetector(private val circuit: Circuit) {
     internal val n = sequence.size
 
     internal fun makeGate(p: GatePoint): Gate {
+        val multiplier = 2.5
         val x = frame.x(p.lon)
         val y = frame.y(p.lat)
         val h = Math.toRadians(p.headingDeg)
         val dx = sin(h)
         val dy = cos(h)
-        val lx = -dy * p.leftM
-        val ly = dx * p.leftM
-        val rx = dy * p.rightM
-        val ry = -dx * p.rightM
+        val lx = -dy * (p.leftM * multiplier)
+        val ly = dx * (p.leftM * multiplier)
+        val rx = dy * (p.rightM * multiplier)
+        val ry = -dx * (p.rightM * multiplier)
         return Gate(x + lx, y + ly, x + rx, y + ry, dx, dy)
     }
 
