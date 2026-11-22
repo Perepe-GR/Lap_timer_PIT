@@ -16,8 +16,8 @@ class GpsFilter {
     }
 
     fun isFixPlausible(lat: Double, lon: Double, speedKmh: Double, timeMs: Long): Boolean {
-        // Hard ceiling at 400.0 km/h
-        if (speedKmh > 400.0) return false
+        // Hard ceiling at 330.0 km/h
+        if (speedKmh > 330.0) return false
 
         // Track max session speed dynamically
         if (speedKmh > maxSessionKmh) {
@@ -30,9 +30,9 @@ class GpsFilter {
         if (lastLat != null && lastLon != null && lastT != null) {
             val dtMs = timeMs - lastT
             if (dtMs in 1..400) {
-                // Reject extreme spatial teleportation jumps (> 150m in < 400ms)
+                // Reject spatial teleportation jumps (> 42.0m in < 400ms, max physical movement at 330 km/h)
                 val dist = distanceM(lastLat, lastLon, lat, lon)
-                if (dist > 150.0) return false
+                if (dist > 42.0) return false
             }
         }
         prevLat = lat

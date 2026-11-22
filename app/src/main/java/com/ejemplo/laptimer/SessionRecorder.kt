@@ -45,8 +45,8 @@ class SessionRecorder(private val store: SessionStore, private val saveTrace: ()
         if (!lastLat.isNaN() && lastGpsT > 0L) {
             val dist = distanceM(lastLat, lastLon, lat, lon)
             val dtSec = (gpsT - lastGpsT) / 1000.0
-            // Reject single-sample GPS teleportation spikes (>35m jump in <400ms)
-            if (dist > 35.0 && dtSec in 0.001..0.4) {
+            // Reject single-sample GPS teleportation spikes (>42m jump in <400ms at 330 km/h)
+            if (dist > 42.0 && dtSec in 0.001..0.4) {
                 return false
             }
             r.distanceM += dist
